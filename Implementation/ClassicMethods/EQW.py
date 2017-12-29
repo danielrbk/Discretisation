@@ -1,7 +1,7 @@
-from Implementation.AbstractDiscretisation import Discretisation
+from Implementation.AbstractDiscretisation import Discretization
 
 
-class EqualWidth(Discretisation):
+class EqualWidth(Discretization):
 
     def __init__(self, data, bin_count):
         super(EqualWidth, self).__init__(data, bin_count)

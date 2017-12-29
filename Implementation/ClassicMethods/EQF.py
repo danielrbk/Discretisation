@@ -1,7 +1,7 @@
-from Implementation.AbstractDiscretisation import Discretisation
+from Implementation.AbstractDiscretisation import Discretization
 
 
-class EqualFrequency(Discretisation):
+class EqualFrequency(Discretization):
 
     def __init__(self, data, bin_count):
         super(EqualFrequency, self).__init__(data, bin_count)
