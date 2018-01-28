@@ -1,5 +1,5 @@
 from os.path import splitext
-
+from Implementation.ClassicMethods.Expert import Expert
 from Implementation.AbstractDiscretisation import Discretization
 from Implementation.DataRow import DataRow
 from Implementation.Entity import Entity
@@ -46,8 +46,21 @@ def discretize_entities(discretizers: List[Discretization]):
 def write_output(class_to_entities: Dict[int, Set[Entity]]):
     pass
 
+
 if __name__ == "__main__":
-    receive_file("C:\\Users\Daniel Rejabek\\a.txt",10)
-    print(Entity.class_to_entities)
+    receive_file("C:\\Users\\redaniel\Downloads\\a.csv",55)
+    id = 0
     for e in entities.values():
-        print(e)
+        str1 = e.__str__()
+        break
+    print(str1)
+
+    d = Expert({1: [13,26]})
+    property_to_entities, class_to_entities, property_to_timestamps = d.discretize()
+    for e_set in class_to_entities.values():
+        for e in e_set:
+            if e.entity_id == 1:
+                print(e)
+
+
+

@@ -1,7 +1,5 @@
 from typing import Dict, List, Set, Tuple
 
-from Implementation.AbstractDiscretisation import Discretization
-from Implementation.DataRow import DataRow
 from Implementation.TimeStamp import TimeStamp
 
 
@@ -19,7 +17,7 @@ class Entity(object):
     def pair_property_entity(entity: 'Entity', temporal_property: int) -> None:
         if temporal_property not in Entity.property_to_entities:
             Entity.property_to_entities[temporal_property] = set()
-        Entity.property_to_entities[temporal_property].add(entity.get_entity_id())
+        Entity.property_to_entities[temporal_property].add(entity)
 
     @staticmethod
     def get_entities_for_property(temporal_property: int) -> Set['Entity']:
@@ -39,7 +37,7 @@ class Entity(object):
     def pair_property_timestamp(property_id: int, time_stamp: TimeStamp) -> None:
         if property_id not in Entity.property_to_timestamps:
             Entity.property_to_timestamps[property_id] = []
-        Entity.property_to_timestamps[property_id].append(TimeStamp)
+        Entity.property_to_timestamps[property_id].append(time_stamp)
 
     @staticmethod
     def get_timestamp_for_property(property_id) -> List[TimeStamp]:
@@ -57,6 +55,7 @@ class Entity(object):
                 self.properties[property_id] = []
             self.properties[property_id].append(time_stamp)
             Entity.pair_property_entity(self, property_id)
+            Entity.pair_property_timestamp(property_id, time_stamp)
 
     def get_properties(self) -> Dict[int, List[TimeStamp]]:
         return self.properties
@@ -65,7 +64,7 @@ class Entity(object):
         return self.entity_id.__hash__()
 
     def __str__(self):
-        ss = self.entity_id.__str__() + ": "
+        ss = self.entity_id.__str__() + ":\n "
         strs = []
         for key in self.properties.keys():
             s = "[%s: [" % key
@@ -74,25 +73,25 @@ class Entity(object):
                 vals.append(val.__str__())
             s += ", ".join(vals) + "]"
             strs.append(s)
-        return ss + ", ".join(strs)
+        return ss + "\n".join(strs)
 
     @staticmethod
     def get_copy_of_maps() -> Tuple[Dict[int, Set['Entity']],Dict[int, Set['Entity']],Dict[int, List[TimeStamp]]]:
         property_to_entities: Dict[int, Set['Entity']] = {}
         class_to_entities: Dict[int, Set['Entity']] = {}
         property_to_timestamps: Dict[int, List[TimeStamp]] = {}
-        old_timestamp_to_new: Dict[TimeStamp,TimeStamp] = {ts: TimeStamp(ts.value,ts.time) for property_id in Entity.property_to_timestamps for ts in Entity.property_to_timestamps[property_id]}
-        for property_id in Entity.property_to_timestamps:
+        old_timestamp_to_new: Dict[TimeStamp,TimeStamp] = {ts: TimeStamp(ts.value, ts.time) for time_stamps in Entity.property_to_timestamps.values() for ts in time_stamps}
+        for property_id in Entity.property_to_timestamps.keys():
             property_to_timestamps[property_id] = [old_timestamp_to_new[ts] for ts in Entity.property_to_timestamps[property_id]]
 
-        for class_id in class_to_entities.keys():
+        for class_id in Entity.class_to_entities.keys():
             class_to_entities[class_id] = set()
-            for entity in class_to_entities[class_id]:
+            for entity in Entity.class_to_entities[class_id]:
                 properties = entity.properties.copy()
                 e = Entity(entity.entity_id, entity.class_separator)
                 for key in properties.keys():
                     properties[key] = [old_timestamp_to_new[ts] for ts in properties[key]]
-                    if key not in property_to_entities[key]:
+                    if key not in property_to_entities:
                         property_to_entities[key] = set()
                     property_to_entities[key].add(e)
                 e.properties = properties

@@ -22,7 +22,7 @@ class DataRow(object):
         line = line.split(',')
         eid = int(line[0])
         tid = int(line[1])
-        time = float(line[2])
+        time = int(line[2])
         time_interval = TimeInterval(time, time)
         val = float(line[3])
         time_stamp = TimeStamp(val, time_interval)

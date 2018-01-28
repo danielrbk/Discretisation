@@ -1,29 +1,29 @@
 from Implementation.AbstractDiscretisation import Discretization
+from typing import Dict, List, Set
+
+from Implementation.BinInterval import BinInterval
+from Implementation.Entity import Entity
+from Implementation.TimeStamp import TimeStamp
 
 
 class EqualFrequency(Discretization):
 
-    def __init__(self, data, bin_count):
-        super(EqualFrequency, self).__init__(data, bin_count)
-        self.discretize()
+    def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
+                       property_to_timestamps: Dict[int, List[TimeStamp]]):
+        cutpoints = {}
+        for property_id in property_to_timestamps.keys():
+            property_values = sorted([ts.value for ts in property_to_timestamps[property_id]])
+            property_count = len(property_values)
+            items_in_bin = property_count / self.bin_count
+            cutpoints[property_id] = []
+            for i in range(1, self.bin_count):
+                cutpoints[property_id].append((property_values[i*items_in_bin-1] + property_values[i*items_in_bin])/2)
+        self.set_bin_ranges_from_cutpoints(cutpoints)
 
-    def set_bin_ranges(self, data_points):
-        time_intervals = []
-        values = []
-        for data_point in data_points:
-            values.append(data_point[1])
-            time_intervals.append(data_point[0])
-        mod = len(values) % self.bin_count
-        stacking_remainder = 0
-        num_in_bin = len(values) // self.bin_count + 1
-        ctr = 0
-        for i in range(num_in_bin-1, len(values), num_in_bin):
-            if mod > 0:
-                mod = (mod + 1) % self.bin_count
-                stacking_remainder += 1
-            i -= stacking_remainder
-            self.bin_ranges[ctr] = (values[i] + values[i+1])/2
-            ctr += 1
+    def __init__(self, bin_count):
+        super(EqualFrequency, self).__init__()
+        self.bin_count = bin_count
+
 
 
 

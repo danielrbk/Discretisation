@@ -7,4 +7,4 @@ class TimeStamp(object):
         self.value = temporal_property_value
 
     def __str__(self):
-        return "<%s , %s>" % (self.value,self.time.__str__())
+        return "<%st , %s>" % (self.time.__str__(),self.value)

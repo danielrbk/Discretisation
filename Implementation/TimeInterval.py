@@ -11,5 +11,5 @@ class TimeInterval:
                (self.start_point == other.start_point and self.end_point < other.end_point)
 
     def __str__(self):
-        return [self.start_point, self.end_point].__str__()
+        return [self.start_point, self.end_point].__str__() if self.start_point!=self.end_point else self.start_point.__str__()
 
