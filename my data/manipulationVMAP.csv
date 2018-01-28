@@ -1,0 +1,17 @@
+Time Stamp,int
+ISE,float
+SP,float
+DAX,float
+FTSE,float
+NIKKEI,float
+BOVESPA,float
+EU,float
+EM,float
+ISE_CLASS,str
+SP_CLASS,str
+DAX_CLASS,str
+FTSE_CLASS,str
+NIKKEI_CLASS,str
+BOVESPA_CLASS,str
+EU_CLASS,str
+EM_CLASS,str
