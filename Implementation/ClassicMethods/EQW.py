@@ -19,7 +19,7 @@ class EqualWidth(Discretization):
             cutpoints[property_id] = []
             for i in range(1, self.bin_count):
                 cutpoints[property_id].append(min_val + interval*i)
-        self.set_bin_ranges_from_cutpoints(cutpoints)
+        self.bins_cutpoints = cutpoints
 
     def __init__(self, bin_count):
         super(EqualWidth, self).__init__()

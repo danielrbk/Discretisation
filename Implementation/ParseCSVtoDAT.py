@@ -126,7 +126,8 @@ def add_value_to_header_ranges(header_to_value_range: Dict[str, any],
     else:
         header_to_value_range[header_name].add(value)
 
-with open("C:\\Users\\redaniel\Downloads\my data\manipulationVMAP.csv") as i:
+path = "C:\my data\\"
+with open(path + "manipulationVMAP.csv") as i:
     string = "".join(i.readlines())
     string = string.encode('utf-8')
     for input in ["ISE","SP","DAX","FTSE","NIKKEI","BOVESPA","EU","EM"]:
@@ -143,5 +144,5 @@ with open("C:\\Users\\redaniel\Downloads\my data\manipulationVMAP.csv") as i:
                 b = input_string.encode('utf-8')
                 f.file.write(b)
                 f.file.write(string)
-            read_csv("C:\\Users\\redaniel\Downloads\my data\manipulations.csv", f.name, out)
+            read_csv(path + "manipulations.csv", f.name, out)
             os.remove(f.name)

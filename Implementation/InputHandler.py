@@ -6,6 +6,8 @@ from Implementation.Entity import Entity
 from typing import Dict, List ,Set
 from copy import deepcopy, copy
 
+from Implementation.TD4C.TD4C import TD4C
+
 supported_extensions = [".txt",".csv"]
 entities: Dict[int,Entity] = {}
 
@@ -48,19 +50,12 @@ def write_output(class_to_entities: Dict[int, Set[Entity]]):
 
 
 if __name__ == "__main__":
-    receive_file("C:\\Users\\redaniel\Downloads\\a.csv",55)
+    receive_file("C:\\Users\Daniel Rejabek\Downloads\\a.csv",55)
     id = 0
     for e in entities.values():
-        str1 = e.__str__()
-        break
-    print(str1)
-
-    d = Expert({1: [13,26]})
-    property_to_entities, class_to_entities, property_to_timestamps = d.discretize()
-    for e_set in class_to_entities.values():
-        for e in e_set:
-            if e.entity_id == 1:
-                print(e)
+        print(e)
+    p2e, c2e, p2t = Entity.get_copy_of_maps()
+    print(TD4C.Cosine(1, p2e, c2e, p2t))
 
 
 

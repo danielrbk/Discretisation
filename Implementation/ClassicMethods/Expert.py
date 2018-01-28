@@ -10,7 +10,7 @@ class Expert(Discretization):
 
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
                        property_to_timestamps: Dict[int, List[TimeStamp]]):
-        self.set_bin_ranges_from_cutpoints(self.bins_cutpoints)
+        pass
 
     def __init__(self, bins_cutpoints: Dict[int, List[int]]):
         super(Expert, self).__init__()
