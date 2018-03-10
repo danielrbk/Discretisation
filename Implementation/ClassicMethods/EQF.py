@@ -16,8 +16,7 @@ class EqualFrequency(Discretization):
             property_count = len(property_values)
             items_in_bin = property_count / self.bin_count
             cutpoints[property_id] = []
-            for i in range(1, self.bin_count):
-                cutpoints[property_id].append((property_values[i*items_in_bin-1] + property_values[i*items_in_bin])/2)
+            cutpoints[property_id] = [((property_values[i*items_in_bin-1] + property_values[i*items_in_bin])/2) for i in range(1, self.bin_count)]
         self.bins_cutpoints = cutpoints
 
     def __init__(self, bin_count):

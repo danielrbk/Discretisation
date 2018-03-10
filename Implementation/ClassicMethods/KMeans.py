@@ -5,23 +5,23 @@ from Implementation.BinInterval import BinInterval
 from Implementation.Entity import Entity
 from Implementation.TimeStamp import TimeStamp
 
+from sklearn.cluster import KMeans as KM
+import numpy as np
 
-class EqualWidth(Discretization):
+
+class KMeans(Discretization):
 
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
                        property_to_timestamps: Dict[int, List[TimeStamp]]):
         cutpoints = {}
         for property_id in property_to_timestamps.keys():
-            property_values = [ts.value for ts in property_to_timestamps[property_id]]
-            min_val = min(property_values)
-            max_val = max(property_values)
-            interval = (min_val+max_val)/self.bin_count
-            cutpoints[property_id] = []
-            cutpoints[property_id] = [min_val + interval*i for i in range(1, self.bin_count)]
+            property_values = np.array([ts.value for ts in property_to_timestamps[property_id]]).reshape(-1,1)
+            kmeans = KM(n_clusters=self.bin_count-1).fit(property_values)
+            cutpoints[property_id] = sorted([centroid[0] for centroid in kmeans.cluster_centers_])
         self.bins_cutpoints = cutpoints
 
     def __init__(self, bin_count):
-        super(EqualWidth, self).__init__()
+        super(KMeans, self).__init__()
         self.bin_count = bin_count
 
 

@@ -7,6 +7,7 @@ from Implementation.TimeStamp import TimeStamp
 from Implementation.ClassicMethods.EQF import EqualFrequency
 from Implementation.ClassicMethods.Expert import Expert
 from math import log
+import numpy as np
 
 class TD4C(Discretization):
 
@@ -81,11 +82,11 @@ class TD4C(Discretization):
 
     @staticmethod
     def __cosine__(p1,p2):
-        sum_p1 = sum(list(map(lambda x: x**2, p1)))**0.5
-        sum_p2 = sum(list(map(lambda x: x**2, p2)))**0.5
-        dot = 0
-        for i in range(len(p1)):
-            dot += p1[i] * p2[i]
+        x = np.array(p1)
+        y = np.array(p2)
+        sum_p1 = np.sqrt(sum(x**2))
+        sum_p2 = np.sqrt(sum(y**2))
+        dot = np.dot(x, np.transpose(y))
         return dot / (sum_p1*sum_p2)
 
     @staticmethod
