@@ -11,15 +11,17 @@ import numpy as np
 
 class TD4C(Discretization):
 
-    def __init__(self, data, bin_count, distance_measure):
+    def __init__(self, bin_count, distance_measure):
         super(TD4C, self).__init__()
         self.distance_measure = distance_measure
         self.chosen_scores = {}
+        self.bin_count = bin_count
 
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]], property_to_timestamps: Dict[int, List[TimeStamp]]):
         chosen_cutoffs = {}
         chosen_scores = {}
         for property_id in property_to_entities.keys():
+            print("Property: %s" % property_id)
             p_p2e, p_c2e, p_p2t = self.confine_view_to_property(property_id, property_to_entities, class_to_entities, property_to_timestamps)
             equal_frequency = EqualFrequency(100)
             equal_frequency.discretize(p_p2e, p_c2e, p_p2t)

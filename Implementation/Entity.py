@@ -79,24 +79,26 @@ class Entity(object):
     def get_copy_of_maps() -> Tuple[Dict[int, Set['Entity']],Dict[int, Set['Entity']],Dict[int, List[TimeStamp]]]:
         property_to_entities: Dict[int, Set['Entity']] = {}
         class_to_entities: Dict[int, Set['Entity']] = {}
-        property_to_timestamps: Dict[int, List[TimeStamp]] = {}
-        old_timestamp_to_new: Dict[TimeStamp,TimeStamp] = {ts: TimeStamp(ts.value, ts.time) for time_stamps in Entity.property_to_timestamps.values() for ts in time_stamps}
-        for property_id in Entity.property_to_timestamps.keys():
-            property_to_timestamps[property_id] = [old_timestamp_to_new[ts] for ts in Entity.property_to_timestamps[property_id]]
+        old_timestamp_to_new: Dict[TimeStamp, TimeStamp] = {ts: TimeStamp(ts.value, ts.time) for time_stamps in Entity.property_to_timestamps.values() for ts in time_stamps}
+        property_to_timestamps: Dict[int, List[TimeStamp]] = {property_id: [old_timestamp_to_new[ts] for ts in Entity.property_to_timestamps[property_id]] for property_id in Entity.property_to_timestamps.keys()}
 
         for class_id in Entity.class_to_entities.keys():
             class_to_entities[class_id] = set()
             for entity in Entity.class_to_entities[class_id]:
                 properties = entity.properties.copy()
                 e = Entity(entity.entity_id, entity.class_separator)
-                for key in properties.keys():
-                    properties[key] = [old_timestamp_to_new[ts] for ts in properties[key]]
-                    if key not in property_to_entities:
-                        property_to_entities[key] = set()
-                    property_to_entities[key].add(e)
+                properties = {old_property: [old_timestamp_to_new[ts] for ts in properties[old_property]] for old_property in properties.keys()}
+                property_ids = set(properties.keys())
+                diff = property_ids.difference(property_to_entities.keys())
+                property_to_entities.update({key: set() for key in diff})
+                updated = [__add_and_reutrn__(property_to_entities, p, e) for p in property_ids]
+                updated = []
                 e.properties = properties
                 class_to_entities[class_id].add(e)
 
         return property_to_entities, class_to_entities, property_to_timestamps
 
 
+def __add_and_reutrn__(property_to_entities, property, entity):
+    property_to_entities[property].add(entity)
+    return 1

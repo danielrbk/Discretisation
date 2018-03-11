@@ -28,10 +28,10 @@ class Discretization(ABC):
             bin_cutpoints = self.bins_cutpoints[property_id]
             if len(bin_cutpoints) == 0:
                 continue
-            bin_ranges = [BinInterval(self.get_symbol(), float('-inf'), bin_cutpoints[0])]
+            bin_ranges = [BinInterval(property_id, self.get_symbol(), float('-inf'), bin_cutpoints[0])]
             for i in range(1, len(bin_cutpoints)):
-                bin_ranges.append(BinInterval(self.get_symbol(), bin_cutpoints[i-1], bin_cutpoints[i]))
-            bin_ranges.append(BinInterval(self.get_symbol(), bin_cutpoints[-1], float('inf')))
+                bin_ranges.append(BinInterval(property_id, self.get_symbol(), bin_cutpoints[i-1], bin_cutpoints[i]))
+            bin_ranges.append(BinInterval(property_id, self.get_symbol(), bin_cutpoints[-1], float('inf')))
             self.property_to_ranges[property_id] = bin_ranges
 
     def get_symbol(self):

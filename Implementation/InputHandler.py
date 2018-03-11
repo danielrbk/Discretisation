@@ -30,11 +30,27 @@ def extract_from_file(file_path, file_extension, class_separator) -> bool:
     return True
 
 
+def extract_from_file_all_lines(file_path, file_extension, class_separator) -> bool:
+    with open(file_path) as f:
+        try:
+            l = f.readline()
+            lines = f.readlines()
+            drs = [DataRow.get_data_from_row(line) for line in lines]
+            entityIds = set([dr.get_entity_id() for dr in drs])
+            entities = {eid: Entity(eid,class_separator) for eid in entityIds}
+            for dr in drs:
+                e = entities[dr.get_entity_id()]
+                e.add_time_stamp(dr.get_temporal_property_id(), dr.get_time_stamp())
+        except:
+            return False
+    return True
+
+
 def receive_file(file_path, class_separator):
     file_extension = splitext(file_path)[1]
     if file_extension not in supported_extensions:
         raise Exception("File extension not supported")
-    if not extract_from_file(file_path, file_extension, class_separator):
+    if not extract_from_file_all_lines(file_path, file_extension, class_separator):
         raise Exception("File format incorrect")
 
 
@@ -49,13 +65,13 @@ def write_output(class_to_entities: Dict[int, Set[Entity]]):
     pass
 
 
+def get_maps_from_file(path, class_seperator):
+    receive_file(path, class_seperator)
+    return Entity.get_copy_of_maps()
+
+
 if __name__ == "__main__":
-    receive_file("C:\\Users\Daniel Rejabek\Downloads\\a.csv",55)
-    id = 0
-    for e in entities.values():
-        print(e)
-    p2e, c2e, p2t = Entity.get_copy_of_maps()
-    print(TD4C.Cosine(1, p2e, c2e, p2t))
+    pass
 
 
 
