@@ -18,7 +18,20 @@ class KMeans(Discretization):
             property_values = np.array([ts.value for ts in property_to_timestamps[property_id]]).reshape(-1,1)
             kmeans = KM(n_clusters=self.bin_count-1).fit(property_values)
             cutpoints[property_id] = sorted([centroid[0] for centroid in kmeans.cluster_centers_])
-        self.bins_cutpoints = cutpoints
+        return cutpoints
+
+    def write_auxiliary_information(self, property_to_entities: Dict[int, Set[Entity]],
+                                    class_to_entities: Dict[int, Set[Entity]],
+                                    property_to_timestamps: Dict[int, List[TimeStamp]],
+                                    path: str):
+        pass
+
+    def set_bin_ranges_for_property(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
+                       property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int):
+        pass
+
+    def get_discretization_name(self):
+        return "KMeans_%s" % self.bin_count
 
     def __init__(self, bin_count):
         super(KMeans, self).__init__()

@@ -10,6 +10,7 @@ from sortedcontainers import SortedList
 from math import log
 import numpy as np
 
+
 class TD4C(Discretization):
 
     def __init__(self, bin_count, distance_measure):
@@ -24,7 +25,6 @@ class TD4C(Discretization):
         m1,m2,m3 = equal_frequency.discretize(property_to_entities, class_to_entities, property_to_timestamps)
         self.candidate_cutpoints = equal_frequency.bins_cutpoints
         cutpoints = self.parallel_cutpoint_set(m1, m2, m3)
-        self.bins_cutpoints = cutpoints
         return cutpoints
 
     def set_bin_ranges_for_property(self, property_to_entities: Dict[int, Set[Entity]],
@@ -70,6 +70,23 @@ class TD4C(Discretization):
 
         self.chosen_scores.update({property_id:chosen_scores})
         return list(chosen_cutoffs)
+
+    def write_auxiliary_information(self, property_to_entities: Dict[int, Set[Entity]],
+                                    class_to_entities: Dict[int, Set[Entity]],
+                                    property_to_timestamps: Dict[int, List[TimeStamp]],
+                                    path: str):
+        pass
+
+    def get_discretization_name(self):
+        return "TD4C_%s_%s" % (self.method_name(),self.bin_count)
+
+    def method_name(self):
+        if self.distance_measure == TD4C.Cosine:
+            return "Cosine"
+        elif self.distance_measure == TD4C.Entropy:
+            return "Entropy"
+        elif self.distance_measure == TD4C.KullbackLiebler:
+            return "KullbackLiebler"
 
     @staticmethod
     def calculate_probability_vector(class_to_state_vector, curr_cutoffs):
@@ -122,6 +139,23 @@ class TD4C(Discretization):
         for i in range(len(classes)):
             for j in range(i + 1, len(classes)):
                 d += TD4C.__cosine__(class_to_probability_vector[classes[i]], class_to_probability_vector[classes[j]])
+        return d
+
+    @staticmethod
+    def __kullback_liebler__(p,q):
+        return sum(list(map(lambda pi, qi: pi * log(pi/qi), zip(p, q))))
+
+    @staticmethod
+    def __SKL__(p,q):
+        return (TD4C.__kullback_liebler__(p,q)+TD4C.__kullback_liebler__(q,p)) / 2
+
+    @staticmethod
+    def KullbackLiebler(class_to_probability_vector) -> float:
+        classes = class_to_probability_vector.keys()
+        d = 0
+        for i in range(len(classes)):
+            for j in range(i + 1, len(classes)):
+                d += TD4C.__SKL__(class_to_probability_vector[i],class_to_probability_vector[j])
         return d
 
 

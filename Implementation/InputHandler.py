@@ -35,17 +35,16 @@ def extract_from_file(file_path, file_extension, class_separator) -> bool:
 
 def extract_from_file_all_lines(file_path, file_extension, class_separator) -> bool:
     with open(file_path) as f:
-        try:
-            l = f.readline()
-            lines = f.readlines()
-            drs = [DataRow.get_data_from_row(line) for line in lines]
-            entityIds = set([dr.get_entity_id() for dr in drs])
-            entities = {eid: Entity(eid,class_separator) for eid in entityIds}
-            for dr in drs:
-                e = entities[dr.get_entity_id()]
-                e.add_time_stamp(dr.get_temporal_property_id(), dr.get_time_stamp())
-        except:
-            return False
+        l = f.readline()
+        lines = f.readlines()
+        drs = [DataRow.get_data_from_row(line) for line in lines]
+        entityIds = set([dr.get_entity_id() for dr in drs])
+        propertyIds = set([dr.get_temporal_property_id() for dr in drs])
+        classes = set([dr.get_time_stamp().value for dr in drs if dr.get_temporal_property_id() == class_separator])
+        entities = {eid: Entity(eid,class_separator) for eid in entityIds}
+        for dr in drs:
+            e = entities[dr.get_entity_id()]
+            e.add_time_stamp(dr.get_temporal_property_id(), dr.get_time_stamp())
     return True
 
 
@@ -53,7 +52,7 @@ def receive_file(file_path, class_separator):
     file_extension = splitext(file_path)[1]
     if file_extension not in supported_extensions:
         raise Exception("File extension not supported")
-    if not extract_from_file_all_lines(file_path, file_extension, class_separator):
+    if not extract_from_file(file_path, file_extension, class_separator):
         raise Exception("File format incorrect")
 
 
@@ -61,10 +60,10 @@ def discretize_entities(discretizers: List[Discretization]):
     for d in discretizers:
         p2e, c2e, p2t = Entity.get_maps()
         d.discretize(p2e, c2e, p2t)
-        write_output(c2e)
+        write_output(d, c2e, path)
 
 
-def write_output(class_to_entities: Dict[int, Set[Entity]]):
+def write_output(discretizer: Discretization, class_to_entities: Dict[int, Set[Entity]], path: str):
     pass
 
 
