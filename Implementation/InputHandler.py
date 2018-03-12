@@ -1,4 +1,7 @@
 from os.path import splitext
+
+import os
+
 from Implementation.ClassicMethods.Expert import Expert
 from Implementation.AbstractDiscretisation import Discretization
 from Implementation.DataRow import DataRow
@@ -56,7 +59,7 @@ def receive_file(file_path, class_separator):
 
 def discretize_entities(discretizers: List[Discretization]):
     for d in discretizers:
-        p2e, c2e, p2t = Entity.get_copy_of_maps()
+        p2e, c2e, p2t = Entity.get_maps()
         d.discretize(p2e, c2e, p2t)
         write_output(c2e)
 
@@ -67,7 +70,7 @@ def write_output(class_to_entities: Dict[int, Set[Entity]]):
 
 def get_maps_from_file(path, class_seperator):
     receive_file(path, class_seperator)
-    return Entity.get_copy_of_maps()
+    return Entity.get_maps()
 
 
 if __name__ == "__main__":

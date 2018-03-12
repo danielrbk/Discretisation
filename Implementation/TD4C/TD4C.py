@@ -6,6 +6,7 @@ from Implementation.Entity import Entity
 from Implementation.TimeStamp import TimeStamp
 from Implementation.ClassicMethods.EQF import EqualFrequency
 from Implementation.ClassicMethods.Expert import Expert
+from sortedcontainers import SortedList
 from math import log
 import numpy as np
 
@@ -16,66 +17,89 @@ class TD4C(Discretization):
         self.distance_measure = distance_measure
         self.chosen_scores = {}
         self.bin_count = bin_count
+        self.candidate_cutpoints = {}
 
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]], property_to_timestamps: Dict[int, List[TimeStamp]]):
-        chosen_cutoffs = {}
-        chosen_scores = {}
-        for property_id in property_to_entities.keys():
-            print("Property: %s" % property_id)
-            p_p2e, p_c2e, p_p2t = self.confine_view_to_property(property_id, property_to_entities, class_to_entities, property_to_timestamps)
-            equal_frequency = EqualFrequency(100)
-            equal_frequency.discretize(p_p2e, p_c2e, p_p2t)
-            candidate_cutoffs: Set[float] = set(equal_frequency.bins_cutpoints[property_id])
-            chosen_cutoffs[property_id] = []
-            chosen_scores[property_id] = []
-            for i in range(self.bin_count-1):
-                max_distance = 0
-                best_cutoff = 0
-                for cutoff in candidate_cutoffs.difference(chosen_cutoffs[property_id]):
-                    j = 0
-                    temp_cutoffs = chosen_cutoffs[property_id].copy()
-                    while len(chosen_cutoffs[property_id]) < j and cutoff > chosen_cutoffs[j]:
-                        j += 1
-                    temp_cutoffs.insert(j, cutoff)
-                    KBD = Expert({property_id: temp_cutoffs})
-                    d_p2e, d_c2e, d_p2t = KBD.discretize(p_p2e, p_c2e, p_p2t)
-                    distance_of_series = self.distance_measure(len(temp_cutoffs), d_p2e, d_c2e, d_p2t)
-                    if distance_of_series > max_distance:
-                        max_distance = distance_of_series
-                        best_cutoff = cutoff
-                j = 0
-                while len(chosen_cutoffs[property_id]) < j and best_cutoff > chosen_cutoffs[j]:
-                    j += 1
-                chosen_cutoffs[property_id].insert(j, best_cutoff)
-                chosen_scores[property_id].insert(j, max_distance)
-        self.chosen_scores = chosen_scores
-        self.bins_cutpoints = chosen_cutoffs
+        equal_frequency = EqualFrequency(100)
+        m1,m2,m3 = equal_frequency.discretize(property_to_entities, class_to_entities, property_to_timestamps)
+        self.candidate_cutpoints = equal_frequency.bins_cutpoints
+        cutpoints = self.parallel_cutpoint_set(m1, m2, m3)
+        self.bins_cutpoints = cutpoints
+        return cutpoints
+
+    def set_bin_ranges_for_property(self, property_to_entities: Dict[int, Set[Entity]],
+                                    class_to_entities: Dict[int, Set[Entity]],
+                                    property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int):
+        candidate_cutoffs: List[float] = sorted(self.candidate_cutpoints[property_id])
+        chosen_cutoffs = SortedList()
+        chosen_cutoffs_indices = SortedList()
+        cutoffs_according_to_order = []
+
+        class_to_state_vector = {}
+
+        for c in class_to_entities.keys():
+            class_to_state_vector[c] = [0]*(len(candidate_cutoffs)+1)
+            ctrs = [Counter([int(ts.value) for ts in entity.properties[property_id]]) for entity in
+                    class_to_entities[c] if entity in property_to_entities[property_id]]
+            ctr = sum(ctrs, Counter())
+            for state in ctr.keys():
+                class_to_state_vector[c][state] += ctr[state]
+
+        chosen_scores = []
+
+        for i in range(self.bin_count - 1):
+            max_distance = 0
+            best_cutoff = 0
+            best_index = 0
+            for j in range(len(candidate_cutoffs)):
+                cutoff = candidate_cutoffs[j]
+                if cutoff in chosen_cutoffs:
+                    continue
+                temp_cutoff_indices = chosen_cutoffs_indices.copy()
+                temp_cutoff_indices.add(j)
+                probability_vector = self.calculate_probability_vector(class_to_state_vector, temp_cutoff_indices)
+                distance_of_series = self.distance_measure(probability_vector)
+                if distance_of_series > max_distance:
+                    max_distance = distance_of_series
+                    best_cutoff = cutoff
+                    best_index = j
+            chosen_cutoffs.add(best_cutoff)
+            chosen_cutoffs_indices.add(best_index)
+            cutoffs_according_to_order.append(best_cutoff)
+            chosen_scores.append(max_distance)
+
+        self.chosen_scores.update({property_id:chosen_scores})
+        return list(chosen_cutoffs)
 
     @staticmethod
-    def calculate_probability_vector(cutoff_count: int, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]], property_to_timestamps: Dict[int, List[TimeStamp]]):
-        class_to_vector = {}
-        key_property = 0
-        for key in property_to_entities.keys():
-            key_property = key
-            break
-        for c in class_to_entities:
-            class_to_vector[c] = [0]*(cutoff_count+1)
-            for entity in class_to_entities[c]:
-                ctr = Counter([int(ts.value) for ts in entity.properties[key_property]])
-                for state in ctr.keys():
-                    class_to_vector[c][state] += ctr[state]
-            sum_of_occurrences = sum(class_to_vector[c])
-            class_to_vector[c] = [occurrence / sum_of_occurrences for occurrence in class_to_vector[c]]
-        return class_to_vector
+    def calculate_probability_vector(class_to_state_vector, curr_cutoffs):
+        class_to_probability_vector = {}
+        for c in class_to_state_vector.keys():
+            state_vector = class_to_state_vector[c]
+            startIndex = 0
+            state = 0
+            total = 0
+            probability_vector = [0]*(len(curr_cutoffs)+1)
+            for index in curr_cutoffs:
+                endIndex = index + 1
+                in_state = sum(state_vector[startIndex:endIndex])
+                probability_vector[state] = in_state
+                total += in_state
+                startIndex = endIndex
+                state += 1
+            in_state = sum(state_vector[startIndex:])
+            total += in_state
+            probability_vector[state] = in_state
+            class_to_probability_vector[c] = [in_state/total for in_state in probability_vector]
+        return class_to_probability_vector
 
     @staticmethod
     def __entropy_measurement__(probability_vector):
         return -sum(list(map(lambda x: x*log(x), probability_vector)))
 
     @staticmethod
-    def Entropy(cutoff_count: int, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]], property_to_timestamps: Dict[int, List[TimeStamp]]) -> float:
-        class_to_vector = TD4C.calculate_probability_vector(cutoff_count, property_to_entities, class_to_entities, property_to_timestamps)
-        classes = [TD4C.__entropy_measurement__(class_to_vector[c]) for c in list(class_to_vector.keys())]
+    def Entropy(class_to_probability_vector) -> float:
+        classes = [TD4C.__entropy_measurement__(class_to_probability_vector[c]) for c in list(class_to_probability_vector.keys())]
         d = 0
         for i in range(len(classes)):
             for j in range(i+1, len(classes)):
@@ -92,15 +116,12 @@ class TD4C(Discretization):
         return dot / (sum_p1*sum_p2)
 
     @staticmethod
-    def Cosine(cutoff_count: int, property_to_entities: Dict[int, Set[Entity]],
-                class_to_entities: Dict[int, Set[Entity]], property_to_timestamps: Dict[int, List[TimeStamp]]) -> float:
-        class_to_vector = TD4C.calculate_probability_vector(cutoff_count, property_to_entities, class_to_entities,
-                                                            property_to_timestamps)
-        classes = list(class_to_vector.keys())
+    def Cosine(class_to_probability_vector) -> float:
+        classes = list(class_to_probability_vector.keys())
         d = 0
         for i in range(len(classes)):
             for j in range(i + 1, len(classes)):
-                d += TD4C.__cosine__(class_to_vector[classes[i]], class_to_vector[classes[j]])
+                d += TD4C.__cosine__(class_to_probability_vector[classes[i]], class_to_probability_vector[classes[j]])
         return d
 
 

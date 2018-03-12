@@ -20,12 +20,12 @@ EXPECTED_OUTPUT_PATH = DATASETS_PATH + "\\" + DATASET_NAME + "\\" + DATASET_NAME
 
 
 def small_file():
-    d = TD4C(5, TD4C.Cosine)
-    name = "TD4C_Cos5"
-
+    d = TD4C(5,TD4C.Cosine)
+    print("Reading file...")
     m1, m2, m3 = get_maps_from_file(DATASET_PATH, CLASS_SEPERATOR)
-    path = EXPECTED_OUTPUT_PATH + name + ".csv"
-    real, expected = get_test_result(path, m1, m2, m3, d)
+    print("Discretizing...")
+    r1,r2,r3 = d.discretize(m1,m2,m3)
+
 
 '''
 class TimingTest(unittest.TestCase):

@@ -1,1 +1,4 @@
-DATASETS_PATH = r"C:\Users\Daniel Rejabek\Downloads\Test Cases\TD4C"
+from os import path
+
+PROJECT_PATH = path.abspath(path.join(__file__ ,"../.."))
+DATASETS_PATH = PROJECT_PATH+"\\"+"datasets"
