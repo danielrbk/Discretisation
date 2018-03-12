@@ -33,6 +33,10 @@ class KMeans(Discretization):
     def get_discretization_name(self):
         return "KMeans_%s" % self.bin_count
 
+    def set_bin_ranges_for_property(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
+                       property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int):
+        pass
+
     def __init__(self, bin_count):
         super(KMeans, self).__init__()
         self.bin_count = bin_count
