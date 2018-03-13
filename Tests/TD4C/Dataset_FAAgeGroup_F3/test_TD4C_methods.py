@@ -19,13 +19,19 @@ EXPECTED_OUTPUT_PATH = DATASETS_PATH + "\\" + DATASET_NAME + "\\" + DATASET_NAME
 
 
 class TestMethods(unittest.TestCase):
+
+    def setUp(self):
+        m1, m2, m3 = get_maps_from_file(DATASET_PATH, CLASS_SEPERATOR)
+        self.m1 = m1
+        self.m2 = m2
+        self.m3 = m3
+
     def test_EQW_3(self):
         d = EqualWidth(3)
         name = "EQW3"
 
-        m1, m2, m3 = get_maps_from_file(DATASET_PATH, CLASS_SEPERATOR)
         path = EXPECTED_OUTPUT_PATH + name + ".csv"
-        real, expected = get_test_result(path, m1, m2, m3, d)
+        real, expected = get_test_result(path, self.m1, self.m2, self.m3, d)
         self.assertEquals(real, expected)
 
     def test_EQW_5(self):
@@ -34,7 +40,7 @@ class TestMethods(unittest.TestCase):
 
         m1, m2, m3 = get_maps_from_file(DATASET_PATH, CLASS_SEPERATOR)
         path = EXPECTED_OUTPUT_PATH + name + ".csv"
-        real, expected = get_test_result(path, m1, m2, m3, d)
+        real, expected = get_test_result(path, self.m1, self.m2, self.m3, d)
         self.assertEquals(real, expected)
 
 

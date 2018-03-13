@@ -143,11 +143,12 @@ class TD4C(Discretization):
 
     @staticmethod
     def __kullback_liebler__(p,q):
-        return sum(list(map(lambda pi, qi: pi * log(pi/qi), zip(p, q))))
+        return sum(list(map(lambda t: t[0] * log(t[0]/t[1]), zip(p, q))))
 
     @staticmethod
     def __SKL__(p,q):
         return (TD4C.__kullback_liebler__(p,q)+TD4C.__kullback_liebler__(q,p)) / 2
+
 
     @staticmethod
     def KullbackLiebler(class_to_probability_vector) -> float:

@@ -35,3 +35,4 @@ def print_maps(property_to_entities, class_to_entities, property_to_timestamps):
         print(c)
         for e in class_to_entities[c]:
             print(e.__str__())
+

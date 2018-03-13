@@ -25,8 +25,12 @@ class Discretization(ABC):
         :param val: Time stamp to discretize
         :return: None
         """
-        while not self.property_to_ranges[property_id][self.bin_id].discretize(val):
-            self.bin_id += 1
+        try:
+            while not self.property_to_ranges[property_id][self.bin_id].discretize(val):
+                self.bin_id += 1
+        except:
+            print(val)
+            raise
 
 
     @abstractmethod
@@ -148,8 +152,10 @@ class Discretization(ABC):
             if property_id not in self.property_to_ranges:
                 continue
             l = sorted(property_to_timestamps[property_id], key=lambda ts: ts.value)
+            i = 0
             for val in l:
                 self.transform(property_id, val)
+                i += 1
             self.bin_id = 0
         return property_to_entities, class_to_entities, property_to_timestamps
 
@@ -210,7 +216,7 @@ class Discretization(ABC):
         property_to_entities: Dict[int, Set['Entity']] = {}
         class_to_entities: Dict[int, Set['Entity']] = {}
         property_to_timestamps: Dict[int, List[TimeStamp]] = {}
-        old_timestamp_to_new: Dict[TimeStamp, TimeStamp] = {ts: TimeStamp(ts.value, ts.time) for time_stamps in
+        old_timestamp_to_new: Dict[Tuple, TimeStamp] = {ts: TimeStamp(ts.value, ts.time) for time_stamps in
                                                             old_property_to_timestamps.values() for ts in
                                                             time_stamps}
         property_to_timestamps = {property_id: [old_timestamp_to_new[ts] for ts in

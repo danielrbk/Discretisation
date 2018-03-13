@@ -3,12 +3,16 @@ import timeit
 import unittest
 from typing import Dict, List
 
+from Implementation.AbstractDiscretisation import Discretization
 from Implementation.ClassicMethods.EQF import EqualFrequency
 from Implementation.ClassicMethods.EQW import EqualWidth
+from Implementation.ClassicMethods.Persist import Persist
 from Implementation.DataObject import DataObject
+from Implementation.Entity import Entity
 from Implementation.InputHandler import get_maps_from_file
 from Implementation.TimeInterval import TimeInterval
 from Implementation.TD4C.TD4C import TD4C
+from Implementation.TimeStamp import TimeStamp
 from Tests.Discretization_Result_Generator import get_test_result
 from Tests.Constants import DATASETS_PATH
 
@@ -18,13 +22,38 @@ CLASS_SEPERATOR = 55
 DATASET_PATH = DATASETS_PATH + "\\" + DATASET_NAME + "\\" + DATASET_NAME + ".csv"
 EXPECTED_OUTPUT_PATH = DATASETS_PATH + "\\" + DATASET_NAME + "\\" + DATASET_NAME + "_"
 
+m1 = None
+m2 = None
+m3 = None
+r1 = None
+r2 = None
+r3 = None
 
-def small_file():
-    d = TD4C(5,TD4C.Cosine)
+
+def read_file():
+    global m1, m2, m3
     print("Reading file...")
     m1, m2, m3 = get_maps_from_file(DATASET_PATH, CLASS_SEPERATOR)
-    print("Discretizing...")
-    r1,r2,r3 = d.discretize(m1,m2,m3)
+
+
+def copy_maps():
+    global r1,r2,r3,m1,m2,m3
+    print("Copying...")
+    r1, r2, r3 = Discretization.get_copy_of_maps(m1, m2, m3)
+
+
+def compare_maps():
+    global r1,r2,r3,m1,m2,m3
+    print("Comparing...")
+    print(r1==m1)
+    print(r2==m2)
+    print(r3==m3)
+
+
+def discretize():
+    global m1,m2,m3
+    d = Persist(3)
+    d1,d2,d3 = d.discretize(m1,m2,m3)
 
 
 '''
@@ -37,7 +66,15 @@ class TimingTest(unittest.TestCase):
 '''
 
 if __name__ == '__main__':
+    name = "Synthetic"
     print("Starting testing")
-    a = timeit.timeit(small_file, number=1)
+    a = timeit.timeit(read_file, number=1)
+    print(a)
+    #a = timeit.timeit(copy_maps, number=1)
+    print(a)
+    #a = timeit.timeit(compare_maps, number=1)
+    print(a)
+    a = timeit.timeit(discretize, number=1)
     print(a)
     print("Ended Testing")
+
