@@ -50,14 +50,15 @@ class Persist(Discretization):
         chosen_cutoffs = SortedList()
         chosen_cutoffs_indices = SortedList()
 
-        time_stamps = sorted(property_to_timestamps[property_id])
+        for e in property_to_entities[property_id]:
+            time_stamps = sorted(e.properties[property_id])
 
-        for i in range(len(time_stamps)-1):
-            prev = time_stamps[i]
-            now = time_stamps[i+1]
-            A[now.value][prev.value] += 1
-            state_vector[prev.value] += 1
-        state_vector[time_stamps[-1].value] += 1
+            for i in range(len(time_stamps)-1):
+                prev = time_stamps[i]
+                now = time_stamps[i+1]
+                A[now.value][prev.value] += 1
+                state_vector[prev.value] += 1
+            state_vector[time_stamps[-1].value] += 1
 
         for i in range(self.bin_count - 1):
             max_distance = float('-inf')

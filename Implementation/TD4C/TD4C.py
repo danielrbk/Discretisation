@@ -25,13 +25,17 @@ class TD4C(Discretization):
         equal_frequency = EqualFrequency(100)
         m1,m2,m3 = equal_frequency.discretize(property_to_entities, class_to_entities, property_to_timestamps)
         self.candidate_cutpoints = equal_frequency.bins_cutpoints
-        cutpoints = self.parallel_cutpoint_set(m1, m2, m3)
+        cutpoints = {}
+        for p in property_to_timestamps.keys():
+            cutpoints[p] = self.set_bin_ranges_for_property(m1, m2, m3, p)
+        # cutpoints = self.parallel_cutpoint_set(m1, m2, m3)
         return cutpoints
 
     def set_bin_ranges_for_property(self, property_to_entities: Dict[int, Set[Entity]],
                                     class_to_entities: Dict[int, Set[Entity]],
                                     property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int):
         candidate_cutoffs: List[float] = sorted(self.candidate_cutpoints[property_id])
+        print("%s: %s" % (property_id, candidate_cutoffs))
         chosen_cutoffs = SortedList()
         chosen_cutoffs_indices = SortedList()
         cutoffs_according_to_order = []
@@ -108,7 +112,7 @@ class TD4C(Discretization):
             in_state = sum(state_vector[startIndex:])
             total += in_state
             probability_vector[state] = in_state
-            class_to_probability_vector[c] = [in_state/total for in_state in probability_vector]
+            class_to_probability_vector[c] = [in_state/total if total>0 else 0 for in_state in probability_vector]
         return class_to_probability_vector
 
     @staticmethod
