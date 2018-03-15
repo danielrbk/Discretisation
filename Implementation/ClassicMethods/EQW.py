@@ -18,7 +18,7 @@ class EqualWidth(Discretization):
         property_values = [ts.value for ts in property_to_timestamps[property_id]]
         min_val = min(property_values)
         max_val = max(property_values)
-        interval = (min_val + max_val) / self.bin_count
+        interval = (max_val-min_val) / self.bin_count
         cutpoints = []
         cutpoints = [min_val + interval * i for i in range(1, self.bin_count)]
         return cutpoints

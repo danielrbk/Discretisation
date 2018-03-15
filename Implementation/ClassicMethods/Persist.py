@@ -5,6 +5,7 @@ from typing import Dict, List, Set, Counter
 
 from Implementation.BinInterval import BinInterval
 from Implementation.ClassicMethods.EQF import EqualFrequency
+from Implementation.Constants import EPSILON
 from Implementation.Entity import Entity
 from Implementation.TD4C.TD4C import TD4C
 from Implementation.TimeStamp import TimeStamp
@@ -23,7 +24,10 @@ class Persist(Discretization):
         equal_frequency = EqualFrequency(100)
         m1, m2, m3 = equal_frequency.discretize(property_to_entities, class_to_entities, property_to_timestamps)
         self.candidate_cutpoints = equal_frequency.bins_cutpoints
-        cutpoints = self.parallel_cutpoint_set(m1, m2, m3)
+        cutpoints = {}
+        for p in property_to_timestamps.keys():
+            cutpoints[p] = self.set_bin_ranges_for_property(m1,m2,m3,p)
+        #cutpoints = self.parallel_cutpoint_set(m1, m2, m3)
         return cutpoints
 
     def get_discretization_name(self) -> str:
@@ -39,6 +43,7 @@ class Persist(Discretization):
                                     property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int) -> List[
         float]:
         candidate_cutoffs: List[float] = sorted(self.candidate_cutpoints[property_id])
+        print("%s: %s" % (property_id,candidate_cutoffs))
         state_count = (len(candidate_cutoffs) + 1)
         A = np.zeros(shape=(state_count, state_count))
         state_vector = [0]*state_count
@@ -55,12 +60,12 @@ class Persist(Discretization):
         state_vector[time_stamps[-1].value] += 1
 
         for i in range(self.bin_count - 1):
-            max_distance = 0
-            best_cutoff = 0
-            best_index = 0
+            max_distance = float('-inf')
+            best_cutoff = float('-inf')
+            best_index = float('-inf')
             for j in range(len(candidate_cutoffs)):
                 cutoff = candidate_cutoffs[j]
-                if cutoff in chosen_cutoffs:
+                if j in chosen_cutoffs_indices:
                     continue
                 temp_cutoff_indices = chosen_cutoffs_indices.copy()
                 temp_cutoff_indices.add(j)
@@ -86,17 +91,23 @@ class Persist(Discretization):
             row_matrices.append(A[prev:cut])
             prev = cut
         row_matrices.append(A[prev:])
-
-        for i in range(new_dimension):
-            B = row_matrices[i]
-            prev = 0
-            for j in range(len(cut_points)):
-                cut = cut_points[j]+1
-                C = B.transpose()[prev:cut]
-                prev = cut
-                new_A[i][j] = sum(sum(C))
-            C = B.transpose()[prev:]
-            new_A[i][-1] = sum(sum(C))
+        C = []
+        try:
+            for i in range(new_dimension):
+                B = row_matrices[i]
+                prev = 0
+                for j in range(len(cut_points)):
+                    cut = cut_points[j]+1
+                    C = B.transpose()[prev:cut]
+                    prev = cut
+                    new_A[i][j] = sum(sum(C))
+                C = B.transpose()[prev:]
+                new_A[i][-1] = sum(sum(C))
+        except:
+            print("C:",C)
+            print("A:",A)
+            print(cut_points)
+            raise
 
         return new_A
 
@@ -105,20 +116,33 @@ class Persist(Discretization):
         total = sum(state_vector)
         marginal_sum = sum(new_A)
         s = 0
+        c = 0
         for i in range(len(new_A)):
+            total_probability = state_vector[i] / total
+            if total_probability == 0:
+                continue
+            c+=1
             if state_vector[i] == 0:
                 continue
             sign = 1
-            marginal_probability = new_A[i][i] / marginal_sum[i]
+            if marginal_sum[i] == 0:
+                marginal_probability = 0
+            else:
+                marginal_probability = new_A[i][i] / marginal_sum[i]
             if marginal_probability == 0:
-                marginal_probability += 0.00001
-            total_probability = state_vector[i] / total
-            if marginal_probability > total_probability :
+                marginal_probability += EPSILON
+            elif marginal_probability == 1:
+                marginal_probability -= EPSILON
+            if total_probability == 1:
+                total_probability -= EPSILON
+
+            if marginal_probability > total_probability:
                 sign = 1
             elif marginal_probability == total_probability:
                 sign = 0
             else:
                 sign = -1
+
             s += sign*Persist.discrete_kullback_liebler(marginal_probability,total_probability)
         return s / len(new_A)
 
