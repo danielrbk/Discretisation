@@ -2,6 +2,7 @@ from Implementation.AbstractDiscretisation import Discretization
 from typing import Dict, List, Set
 from collections import Counter
 from Implementation.BinInterval import BinInterval
+from Implementation.Constants import EPSILON
 from Implementation.Entity import Entity
 from Implementation.TimeStamp import TimeStamp
 from Implementation.ClassicMethods.EQF import EqualFrequency
@@ -24,13 +25,17 @@ class TD4C(Discretization):
         equal_frequency = EqualFrequency(100)
         m1,m2,m3 = equal_frequency.discretize(property_to_entities, class_to_entities, property_to_timestamps)
         self.candidate_cutpoints = equal_frequency.bins_cutpoints
-        cutpoints = self.parallel_cutpoint_set(m1, m2, m3)
+        cutpoints = {}
+        for p in property_to_timestamps.keys():
+            cutpoints[p] = self.set_bin_ranges_for_property(m1, m2, m3, p)
+        # cutpoints = self.parallel_cutpoint_set(m1, m2, m3)
         return cutpoints
 
     def set_bin_ranges_for_property(self, property_to_entities: Dict[int, Set[Entity]],
                                     class_to_entities: Dict[int, Set[Entity]],
                                     property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int):
         candidate_cutoffs: List[float] = sorted(self.candidate_cutpoints[property_id])
+        print("%s: %s" % (property_id, candidate_cutoffs))
         chosen_cutoffs = SortedList()
         chosen_cutoffs_indices = SortedList()
         cutoffs_according_to_order = []
@@ -48,12 +53,12 @@ class TD4C(Discretization):
         chosen_scores = []
 
         for i in range(self.bin_count - 1):
-            max_distance = 0
-            best_cutoff = 0
-            best_index = 0
+            max_distance = float('-inf')
+            best_cutoff = float('-inf')
+            best_index = float('-inf')
             for j in range(len(candidate_cutoffs)):
                 cutoff = candidate_cutoffs[j]
-                if cutoff in chosen_cutoffs:
+                if j in chosen_cutoffs_indices:
                     continue
                 temp_cutoff_indices = chosen_cutoffs_indices.copy()
                 temp_cutoff_indices.add(j)
@@ -107,16 +112,16 @@ class TD4C(Discretization):
             in_state = sum(state_vector[startIndex:])
             total += in_state
             probability_vector[state] = in_state
-            class_to_probability_vector[c] = [in_state/total for in_state in probability_vector]
+            class_to_probability_vector[c] = [in_state/total if total>0 else 0 for in_state in probability_vector]
         return class_to_probability_vector
 
     @staticmethod
-    def __entropy_measurement__(probability_vector):
-        return -sum(list(map(lambda x: x*log(x), probability_vector)))
+    def __entropy_measurement__(probability_vector, b):
+        return -sum(list(map(lambda x: x*log(x, b) if x > 0 else 0, probability_vector)))
 
     @staticmethod
     def Entropy(class_to_probability_vector) -> float:
-        classes = [TD4C.__entropy_measurement__(class_to_probability_vector[c]) for c in list(class_to_probability_vector.keys())]
+        classes = [TD4C.__entropy_measurement__(class_to_probability_vector[c],len(class_to_probability_vector.keys())) for c in list(class_to_probability_vector.keys())]
         d = 0
         for i in range(len(classes)):
             for j in range(i+1, len(classes)):
@@ -125,12 +130,15 @@ class TD4C(Discretization):
 
     @staticmethod
     def __cosine__(p1,p2):
+        from math import acos
         x = np.array(p1)
         y = np.array(p2)
         sum_p1 = np.sqrt(sum(x**2))
         sum_p2 = np.sqrt(sum(y**2))
         dot = np.dot(x, np.transpose(y))
-        return dot / (sum_p1*sum_p2)
+        if sum_p1 == 0 or sum_p2 == 0:
+            return 0
+        return acos(dot / (sum_p1*sum_p2))
 
     @staticmethod
     def Cosine(class_to_probability_vector) -> float:
@@ -142,20 +150,33 @@ class TD4C(Discretization):
         return d
 
     @staticmethod
-    def __kullback_liebler__(p,q):
-        return sum(list(map(lambda pi, qi: pi * log(pi/qi), zip(p, q))))
+    def __kullback_liebler__(p, q):
+        def KL(t):
+            pi = t[0]
+            qi = t[1]
+            if pi == 0:
+                return 0
+            if qi == 0:
+                return pi * log(EPSILON)
+            return pi * log(pi/qi)
+        try:
+            return sum(list(map(KL, zip(p, q))))
+        except:
+            print(p,q)
+            raise
 
     @staticmethod
     def __SKL__(p,q):
-        return (TD4C.__kullback_liebler__(p,q)+TD4C.__kullback_liebler__(q,p)) / 2
+        return (TD4C.__kullback_liebler__(p, q)+TD4C.__kullback_liebler__(q, p)) / 2
+
 
     @staticmethod
     def KullbackLiebler(class_to_probability_vector) -> float:
-        classes = class_to_probability_vector.keys()
+        classes = list(class_to_probability_vector.keys())
         d = 0
         for i in range(len(classes)):
             for j in range(i + 1, len(classes)):
-                d += TD4C.__SKL__(class_to_probability_vector[i],class_to_probability_vector[j])
+                d += TD4C.__SKL__(class_to_probability_vector[classes[i]],class_to_probability_vector[classes[j]])
         return d
 
 

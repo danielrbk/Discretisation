@@ -3,9 +3,6 @@ class TimeInterval:
         self.start_point = start_point
         self.end_point = end_point
 
-    def __eq__(self, other):
-        return self.start_point == other.start_point and self.end_point == other.end_point
-
     def __lt__(self, other):
         return self.start_point < other.start_point or \
                (self.start_point == other.start_point and self.end_point < other.end_point)
