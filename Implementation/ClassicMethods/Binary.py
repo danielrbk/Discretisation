@@ -70,10 +70,18 @@ class Binary(Discretization):
         matching_entities = property_to_entities[property_id]
         matching_classes = set()
         property_value_class_list = []
-
+        c_value = None
         for e in matching_entities:
             p_value = e.properties[property_id][0].value
-            c_value = e.class_separator
+            for _class in class_to_entities:
+                for _e in class_to_entities[_class]:
+                    if _e.entity_id == e.entity_id:
+                        c_value = _class
+                        break
+                if c_value is not None:
+                    break
+
+            #c_value = e.class_separator
             matching_classes.add(c_value)
             property_value_class_list.append((p_value, c_value))
 
