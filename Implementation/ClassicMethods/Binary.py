@@ -35,27 +35,21 @@ def entropy(property_class_list, class_list):
     for i, val in enumerate(class_list):
         class_proportion = count_class(val, property_class_list)
         class_proportion = class_proportion / len(property_class_list)
-        print(class_proportion)
         if class_proportion != 0:
             ent_res += (class_proportion * math.log(class_proportion, 10))
-            print("$$$$$$$$$$$")
-            print(ent_res)
 
     ent_res = - ent_res
     return ent_res
 
 
 def class_information_entropy(subset_1, subset_2, classes_list):
-    print("**************************")
     s1_size = len(subset_1)
     s2_size = len(subset_2)
     total_set_size = s1_size + s2_size
-    print(subset_1)
-    print(subset_2)
     res = ((s1_size / total_set_size) * entropy(subset_1, classes_list)) + \
           ((s2_size / total_set_size) * entropy(subset_2, classes_list))
-    print(res)
     return -res
+
 
 class Binary(Discretization):
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
