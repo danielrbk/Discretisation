@@ -10,7 +10,7 @@ from Implementation.TimeStamp import TimeStamp
 import numpy as np
 
 
-def count_class(class_val, property_class_list):
+def __count_class__(class_val, property_class_list):
     """
 
     :param class_val: the class to count
@@ -33,7 +33,7 @@ def entropy(property_class_list, class_list):
     """
     ent_res = 0
     for i, val in enumerate(class_list):
-        class_proportion = count_class(val, property_class_list)
+        class_proportion = __count_class__(val, property_class_list)
         class_proportion = class_proportion / len(property_class_list)
         if class_proportion != 0:
             ent_res += (class_proportion * math.log(class_proportion, 10))
