@@ -112,7 +112,7 @@ class Binary(Discretization):
 
     def __init__(self, bin_count):
         super(Binary, self).__init__()
-        self.bin_count = bin_count
+        self.bin_count = int(bin_count)
 
 #
 if __name__ == '__main__':

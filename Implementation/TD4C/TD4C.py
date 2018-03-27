@@ -16,10 +16,10 @@ class TD4C(Discretization):
 
     def __init__(self, bin_count, distance_measure, ACCURACY_MEASURE = 100):
         super(TD4C, self).__init__()
-        self.ACCURACY_MEASURE = ACCURACY_MEASURE
+        self.ACCURACY_MEASURE = int(ACCURACY_MEASURE)
         self.distance_measure = distance_measure
         self.chosen_scores = {}
-        self.bin_count = bin_count
+        self.bin_count = int(bin_count)
         self.candidate_cutpoints = {}
         self.cutoffs_according_to_order = {}
 

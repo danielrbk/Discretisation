@@ -39,7 +39,7 @@ class KMeans(Discretization):
 
     def __init__(self, bin_count):
         super(KMeans, self).__init__()
-        self.bin_count = bin_count
+        self.bin_count = int(bin_count)
 
 
 

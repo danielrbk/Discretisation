@@ -17,7 +17,7 @@ import numpy as np
 class Persist(Discretization):
     def __init__(self, bin_count):
         super(Persist, self).__init__()
-        self.bin_count = bin_count
+        self.bin_count = int(bin_count)
 
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
                        property_to_timestamps: Dict[int, List[TimeStamp]]) -> Dict[int, List[float]]:
