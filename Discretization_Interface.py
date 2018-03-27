@@ -22,7 +22,9 @@ def run_method(input_path, output_path_folder, method_name, args):
     m1, m2, m3 = get_maps_from_file(input_path, 55)
     d1, d2, d3 = d.discretize(m1, m2, m3)
     convert_cutpoints_to_output(d2, output_path_folder, dataset_name, d.get_discretization_name())
-
+    d.write_auxiliary_information(d1, d2, d3, output_path_folder)
+    with open(output_path_folder + "\\" + "cut_points.txt") as f:
+        f.write(d.bins_cutpoints)
 
 if __name__ == '__main__':
     run_method(*sys.argv[1:])

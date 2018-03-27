@@ -19,7 +19,7 @@ def convert_cutpoints_to_output(class_to_entities: Dict[int, Set[Entity]], folde
         number_of_entities += len(class_to_entities[_class])
 
     for _class in class_to_entities:
-        file_name = dataset_name + '_' + method_name + '_Class' + str(_class) + '.txt'
+        file_name =  method_name + '_Class' + str(_class) + '.txt'
         full_path = folder_path + file_name
         with open(full_path, 'w+') as f:
             f.write('startToncepts \n')
