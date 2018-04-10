@@ -24,6 +24,7 @@ class TD4C(Discretization):
                 distance_measure = TD4C.Entropy
             elif distance_measure == "KullbackLiebler":
                 distance_measure = TD4C.KullbackLiebler
+        i = 0
         self.distance_measure = distance_measure
         self.chosen_scores = {}
         self.bin_count = int(bin_count)
