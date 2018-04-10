@@ -15,7 +15,7 @@ supported_extensions = [".txt",".csv"]
 entities: Dict[int,Entity] = {}
 
 
-def extract_from_file(file_path, file_extension, class_separator) -> bool:
+def extract_from_file(file_path, file_extension, class_separator, add_class_information_to_timestamps=False) -> bool:
     with open(file_path) as f:
         try:
             l = f.readline()
@@ -28,6 +28,19 @@ def extract_from_file(file_path, file_extension, class_separator) -> bool:
                     e = Entity(eid, class_separator)
                     entities[eid] = e
                 e.add_time_stamp(dr.get_temporal_property_id(),dr.get_time_stamp())
+            p2e, c2e, p2t = Entity.get_maps()
+            # holy loops batman
+            if add_class_information_to_timestamps:
+                for c in c2e:
+                    es = c2e[c]
+                    for e in es:
+                        ps = e.properties
+                        for p in ps:
+                            for t in ps[p]:
+                                t.ts_class = c
+
+
+
         except:
             return False
     return True
@@ -48,11 +61,11 @@ def extract_from_file_all_lines(file_path, file_extension, class_separator) -> b
     return True
 
 
-def receive_file(file_path, class_separator):
+def receive_file(file_path, class_separator, class_information):
     file_extension = splitext(file_path)[1]
     if file_extension not in supported_extensions:
         raise Exception("File extension not supported")
-    if not extract_from_file(file_path, file_extension, class_separator):
+    if not extract_from_file(file_path, file_extension, class_separator, class_information):
         raise Exception("File format incorrect")
 
 
@@ -67,8 +80,8 @@ def write_output(discretizer: Discretization, class_to_entities: Dict[int, Set[E
     pass
 
 
-def get_maps_from_file(path, class_seperator):
-    receive_file(path, class_seperator)
+def get_maps_from_file(path, class_seperator, class_information=False):
+    receive_file(path, class_seperator, class_information)
     return Entity.get_maps()
 
 

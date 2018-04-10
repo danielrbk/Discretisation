@@ -33,7 +33,7 @@ r3 = None
 def read_file():
     global m1, m2, m3
     print("Reading file...")
-    m1, m2, m3 = get_maps_from_file(DATASET_PATH, CLASS_SEPERATOR)
+    m1, m2, m3 = get_maps_from_file(DATASET_PATH, CLASS_SEPERATOR, True)
 
 
 def copy_maps():
@@ -52,7 +52,7 @@ def compare_maps():
 
 def discretize():
     global m1,m2,m3
-    d = Persist(3)
+    d = TD4C(2, TD4C.Cosine)
     d1,d2,d3 = d.discretize(m1,m2,m3)
 
 
@@ -74,7 +74,8 @@ if __name__ == '__main__':
     print(a)
     #a = timeit.timeit(compare_maps, number=1)
     print(a)
-    a = timeit.timeit(discretize, number=1)
+    discretize()
+    #a = timeit.timeit(discretize, number=1)
     print(a)
     print("Ended Testing")
 

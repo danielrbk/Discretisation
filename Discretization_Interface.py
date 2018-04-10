@@ -3,9 +3,10 @@ from Implementation.InputHandler import get_maps_from_file
 from Implementation.OutputHandling.Discretization_Out_Handler import convert_cutpoints_to_output
 import sys
 
+from Implementation.TD4C.TD4C import TD4C
 
 methods_names_to_functions = {"BINARY": Binary.Binary, "EQF": EQF.EqualFrequency, "EQW": EQW.EqualWidth, "EXPERT": Expert.Expert,
-                              "KMEANS": KMeans.KMeans, "PERSIST": Persist.Persist, "SAX": SAX}
+                              "KMEANS": KMeans.KMeans, "PERSIST": Persist.Persist, "SAX": SAX, "TD4C": TD4C}
 
 
 def run_method(input_path, output_path_folder, method_name, args):

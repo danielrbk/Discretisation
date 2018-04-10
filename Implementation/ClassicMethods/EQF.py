@@ -46,8 +46,8 @@ class EqualFrequency(Discretization):
 
         indices = [get_index(percent, property_count) for percent in percentiles]
         cutpoints = [get_cutpoint(i, property_values) for i in indices]
-        #return list(set(cutpoints))
-        return cutpoints
+        return list(sorted((set(cutpoints))))
+        #return cutpoints
 
     def write_auxiliary_information(self, property_to_entities: Dict[int, Set[Entity]],
                                     class_to_entities: Dict[int, Set[Entity]],

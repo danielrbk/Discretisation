@@ -17,6 +17,13 @@ class TD4C(Discretization):
     def __init__(self, bin_count, distance_measure, ACCURACY_MEASURE = 100):
         super(TD4C, self).__init__()
         self.ACCURACY_MEASURE = int(ACCURACY_MEASURE)
+        if isinstance(distance_measure, str):
+            if distance_measure == "Cosine":
+                distance_measure = TD4C.Cosine
+            elif distance_measure == "Entropy":
+                distance_measure = TD4C.Entropy
+            elif distance_measure == "KullbackLiebler":
+                distance_measure = TD4C.KullbackLiebler
         self.distance_measure = distance_measure
         self.chosen_scores = {}
         self.bin_count = int(bin_count)
@@ -34,7 +41,7 @@ class TD4C(Discretization):
         return cutpoints
 
     def set_bin_ranges_for_property(self, property_to_entities: Dict[int, Set[Entity]],
-                                    class_to_entities: Dict[int, Set[Entity]],
+                                     class_to_entities: Dict[int, Set[Entity]],
                                     property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int):
         candidate_cutoffs: List[float] = sorted(self.candidate_cutpoints[property_id])
         chosen_cutoffs = SortedList()
