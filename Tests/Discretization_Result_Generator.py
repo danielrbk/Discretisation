@@ -45,7 +45,10 @@ def get_expected_output(path, property_to_cutpoints: Dict[int, List]):
 
 def print_maps(property_to_entities, class_to_entities, property_to_timestamps):
     for c in class_to_entities:
-        print(c)
+        print("")
+        print("------")
+        print("Class ",c)
         for e in class_to_entities[c]:
             print(e.__str__())
+        print("------")
 

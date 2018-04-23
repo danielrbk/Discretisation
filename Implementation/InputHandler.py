@@ -15,7 +15,7 @@ supported_extensions = [".txt",".csv"]
 entities: Dict[int,Entity] = {}
 
 
-def extract_from_file(file_path, file_extension, class_separator, add_class_information_to_timestamps=False) -> bool:
+def extract_from_file(file_path, file_extension, class_separator, add_class_information_to_timestamps) -> bool:
     with open(file_path) as f:
         try:
             l = f.readline()

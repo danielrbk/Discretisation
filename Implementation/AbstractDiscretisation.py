@@ -12,7 +12,8 @@ from Implementation.TimeStamp import TimeStamp
 class Discretization(ABC):
     bin_id = 0
 
-    def __init__(self):
+    def __init__(self, interval_max_gap):
+        self.max_gap: int = int(interval_max_gap)
         self.property_to_ranges: Dict[int, List[BinInterval]] = {}  # List of bin cutpoints, using OOP
         self.bin_count: int = 0  # Number of bins
         self.bin_symbol: int = -1  # Discretization symbol
@@ -148,6 +149,7 @@ class Discretization(ABC):
         cutpoints = self.set_bin_ranges(property_to_entities, class_to_entities, property_to_timestamps)
         self.bins_cutpoints = cutpoints
         self.set_bin_ranges_from_cutpoints()
+        property_to_intervals: Dict[int,List[TimeStamp]] = {}
         for property_id in property_to_timestamps.keys():
             if property_id not in self.property_to_ranges:
                 continue
@@ -157,6 +159,36 @@ class Discretization(ABC):
                 self.transform(property_id, val)
                 i += 1
             self.bin_id = 0
+            if self.max_gap >= 0:
+                property_to_timestamps[property_id] = []
+                entities = property_to_entities[property_id]
+                for entity in entities:
+                    time_stamps: List[TimeStamp] = entity.properties[property_id]
+                    sorted_time_stamps = sorted(time_stamps, key=lambda ts: (ts.value,ts.time.start_point))
+                    ts_index = 0
+                    new_timestamps = []
+                    prev_ts = None
+                    curr_val = -100
+                    # connect time stamps
+                    while ts_index < len(sorted_time_stamps):
+                        curr_ts = sorted_time_stamps[ts_index]
+                        if curr_val != curr_ts.value:
+                            if prev_ts is not None:
+                                new_timestamps.append(prev_ts)
+                            prev_ts = curr_ts
+                            curr_val = curr_ts.value
+                        else:
+                            if curr_ts.time.start_point - prev_ts.time.end_point - 1 <= self.max_gap:
+                                prev_ts.time.end_point = curr_ts.time.end_point
+                            else:
+                                new_timestamps.append(prev_ts)
+                                prev_ts = curr_ts
+                        if ts_index + 1 == len(sorted_time_stamps):
+                            new_timestamps.append(prev_ts)
+                        ts_index += 1
+                    entity.properties[property_id] = new_timestamps
+                    property_to_timestamps[property_id] += new_timestamps
+                property_to_timestamps[property_id] = sorted(property_to_timestamps[property_id], key=lambda ts: ts.time.start_point)
         return property_to_entities, class_to_entities, property_to_timestamps
 
     def set_and_get_cutpoints(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
@@ -216,7 +248,7 @@ class Discretization(ABC):
         property_to_entities: Dict[int, Set['Entity']] = {}
         class_to_entities: Dict[int, Set['Entity']] = {}
         property_to_timestamps: Dict[int, List[TimeStamp]] = {}
-        old_timestamp_to_new: Dict[Tuple, TimeStamp] = {ts: TimeStamp(ts.value, ts.time) for time_stamps in
+        old_timestamp_to_new: Dict[Tuple, TimeStamp] = {ts: TimeStamp(ts.value, ts.time, ts.ts_class) for time_stamps in
                                                             old_property_to_timestamps.values() for ts in
                                                             time_stamps}
         property_to_timestamps = {property_id: [old_timestamp_to_new[ts] for ts in

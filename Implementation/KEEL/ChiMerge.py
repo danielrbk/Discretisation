@@ -7,8 +7,8 @@ from Implementation.TimeStamp import TimeStamp
 
 
 class ChiMerge(Discretization):
-    def __init__(self):
-        super(ChiMerge, self).__init__()
+    def __init__(self, max_gap):
+        super(ChiMerge, self).__init__(max_gap)
 
     def get_discretization_name(self) -> str:
         pass

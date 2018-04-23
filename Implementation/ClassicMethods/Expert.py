@@ -25,8 +25,8 @@ class Expert(Discretization):
     def get_discretization_name(self):
         return "Expert"
 
-    def __init__(self, bins_cutpoints: Dict[int, List[int]]):
-        super(Expert, self).__init__()
+    def __init__(self, bins_cutpoints: Dict[int, List[int]], max_gap):
+        super(Expert, self).__init__(max_gap)
         self.bins_cutpoints: Dict[int,List[int]] = bins_cutpoints
 
 

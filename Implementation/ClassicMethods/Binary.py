@@ -110,8 +110,8 @@ class Binary(Discretization):
     def get_discretization_name(self):
         return "BINARY_%s" % self.bin_count
 
-    def __init__(self, bin_count):
-        super(Binary, self).__init__()
+    def __init__(self, bin_count, max_gap):
+        super(Binary, self).__init__(max_gap)
         self.bin_count = int(bin_count)
 
 #

@@ -37,8 +37,8 @@ class KMeans(Discretization):
                        property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int):
         pass
 
-    def __init__(self, bin_count):
-        super(KMeans, self).__init__()
+    def __init__(self, bin_count, max_gap):
+        super(KMeans, self).__init__(max_gap)
         self.bin_count = int(bin_count)
 
 

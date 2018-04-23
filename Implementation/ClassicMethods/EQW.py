@@ -32,8 +32,8 @@ class EqualWidth(Discretization):
     def get_discretization_name(self):
         return "EQW_%s" % self.bin_count
 
-    def __init__(self, bin_count):
-        super(EqualWidth, self).__init__()
+    def __init__(self, bin_count, max_gap):
+        super(EqualWidth, self).__init__(max_gap)
         self.bin_count = int(bin_count)
 
 

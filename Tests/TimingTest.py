@@ -6,17 +6,17 @@ from typing import Dict, List
 from Implementation.AbstractDiscretisation import Discretization
 from Implementation.ClassicMethods.EQF import EqualFrequency
 from Implementation.ClassicMethods.EQW import EqualWidth
+from Implementation.ClassicMethods.Expert import Expert
 from Implementation.ClassicMethods.Persist import Persist
-from Implementation.DataObject import DataObject
 from Implementation.Entity import Entity
 from Implementation.InputHandler import get_maps_from_file
 from Implementation.TimeInterval import TimeInterval
 from Implementation.TD4C.TD4C import TD4C
 from Implementation.TimeStamp import TimeStamp
-from Tests.Discretization_Result_Generator import get_test_result
+from Tests.Discretization_Result_Generator import get_test_result, print_maps
 from Tests.Constants import DATASETS_PATH
 
-DATASET_NAME = "SAGender"
+DATASET_NAME = "TestDataSet"
 CLASS_SEPERATOR = 55
 
 DATASET_PATH = DATASETS_PATH + "\\" + DATASET_NAME + "\\" + DATASET_NAME + ".csv"
@@ -52,8 +52,11 @@ def compare_maps():
 
 def discretize():
     global m1,m2,m3
-    d = TD4C(2, TD4C.Cosine)
+    d = Expert({44: [0.74], 3: [26], 4:[21], 5:[70]}, max_gap=1)
     d1,d2,d3 = d.discretize(m1,m2,m3)
+    print_maps(d1,d2,d3)
+
+
 
 
 '''

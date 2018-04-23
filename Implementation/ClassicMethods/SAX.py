@@ -23,8 +23,8 @@ class SaxConstrainsException(Exception): pass
 
 
 class SAX(Discretization):
-    def __init__(self, bin_count):
-        super(SAX, self).__init__()
+    def __init__(self, bin_count, max_gap):
+        super(SAX, self).__init__(max_gap)
         self.bin_count = bin_count
 
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
