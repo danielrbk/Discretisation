@@ -7,7 +7,7 @@ from Implementation.ClassicMethods import Binary, EQF, EQW, Expert, KMeans, Pers
 from Implementation.InputHandler import get_maps_from_file
 from Implementation.OutputHandling.Discretization_Out_Handler import convert_cutpoints_to_output
 from Implementation.TD4C.TD4C import TD4C
-from RunKL import run_KL
+#from RunKL import run_KL
 
 methods_names_to_functions = {"BINARY": Binary.Binary, "EQF": EQF.EqualFrequency, "EQW": EQW.EqualWidth, "EXPERT": Expert.Expert,
                               "KMEANS": KMeans.KMeans, "PERSIST": Persist.Persist, "SAX": SAX, "TD4C": TD4C}
