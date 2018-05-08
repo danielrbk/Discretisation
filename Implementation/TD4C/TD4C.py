@@ -14,8 +14,8 @@ import numpy as np
 
 class TD4C(Discretization):
 
-    def __init__(self, bin_count, distance_measure, ACCURACY_MEASURE = 100):
-        super(TD4C, self).__init__()
+    def __init__(self, bin_count, distance_measure, max_gap, ACCURACY_MEASURE = 100):
+        super(TD4C, self).__init__(max_gap)
         self.ACCURACY_MEASURE = int(ACCURACY_MEASURE)
         if isinstance(distance_measure, str):
             if distance_measure == "Cosine":
@@ -32,7 +32,7 @@ class TD4C(Discretization):
         self.cutoffs_according_to_order = {}
 
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]], property_to_timestamps: Dict[int, List[TimeStamp]]):
-        equal_frequency = EqualFrequency(self.ACCURACY_MEASURE)
+        equal_frequency = EqualFrequency(self.ACCURACY_MEASURE, -1)
         m1,m2,m3 = equal_frequency.discretize(property_to_entities, class_to_entities, property_to_timestamps)
         self.candidate_cutpoints = equal_frequency.bins_cutpoints
         cutpoints = {}

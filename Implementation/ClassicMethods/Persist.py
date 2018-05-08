@@ -21,7 +21,7 @@ class Persist(Discretization):
 
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
                        property_to_timestamps: Dict[int, List[TimeStamp]]) -> Dict[int, List[float]]:
-        equal_frequency = EqualFrequency(100)
+        equal_frequency = EqualFrequency(100, -1)
         m1, m2, m3 = equal_frequency.discretize(property_to_entities, class_to_entities, property_to_timestamps)
         self.candidate_cutpoints = equal_frequency.bins_cutpoints
         cutpoints = {}
@@ -31,7 +31,7 @@ class Persist(Discretization):
         return cutpoints
 
     def get_discretization_name(self) -> str:
-        pass
+        return "Persist_%s_%s" % (self.bin_count, self.max_gap)
 
     def write_auxiliary_information(self, property_to_entities: Dict[int, Set[Entity]],
                                     class_to_entities: Dict[int, Set[Entity]],
