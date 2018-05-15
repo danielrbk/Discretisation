@@ -1,5 +1,4 @@
 from sortedcontainers import SortedList
-
 from Implementation.AbstractDiscretisation import Discretization
 from typing import Dict, List, Set, Counter
 

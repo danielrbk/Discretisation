@@ -8,6 +8,7 @@ from Implementation.InputHandler import get_maps_from_file
 from Implementation.OutputHandling.Discretization_Out_Handler import convert_cutpoints_to_output
 from Implementation.TD4C.TD4C import TD4C
 #from RunKL import run_KL
+from RunKL import run_KL
 
 methods_names_to_functions = {"BINARY": Binary.Binary, "EQF": EQF.EqualFrequency, "EQW": EQW.EqualWidth, "EXPERT": Expert.Expert,
                               "KMEANS": KMeans.KMeans, "PERSIST": Persist.Persist, "SAX": SAX, "TD4C": TD4C}
@@ -51,7 +52,7 @@ def run_methods(root_folder, list_of_paths: List[str]):
     for path in list_of_paths:
         path = path.split("/")
         file_id = path[0]
-        method_name = path[1]
+        method_name = path[1].upper()
         abstraction_args = path[2]
         if len(path) > 3:
             pattern_discovery_args = path[3]
@@ -68,17 +69,23 @@ def run_methods(root_folder, list_of_paths: List[str]):
 
     for file_id in file_to_runs:
         input_path = "%s\\%s\\%s.csv" % (root_folder, file_id, file_id)
-        m1, m2, m3 = get_maps_from_file(input_path, CLASS_SEPERATOR)
+        discretizable = True
+        try:
+            m1, m2, m3 = get_maps_from_file(input_path, CLASS_SEPERATOR)
+        except:
+            discretizable = False
         for running_configuration in file_to_runs[file_id]:
             method_name = running_configuration[0]
             args = running_configuration[1]
             output_path_folder = "%s\\%s\\%s\\%s" % (root_folder, file_id, method_name, args)
+            if not exists(output_path_folder):
+                makedirs(output_path_folder)
             args = args.split("_")
             try:
                 if method_name == "KARMALEGO":
-                    run_KL(input_path, output_path_folder + "\\TIRPS.csv", *args)
+                    run_KL(input_path, output_path_folder, *args)
                     pass
-                else:
+                elif discretizable:
                     d = methods_names_to_functions[method_name](*args)
                     d1, d2, d3 = d.discretize(m1, m2, m3)
                     convert_cutpoints_to_output(d2, output_path_folder, file_id, d.get_discretization_name())
