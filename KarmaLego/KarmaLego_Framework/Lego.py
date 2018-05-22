@@ -197,9 +197,5 @@ class Lego(object):
          :param path: the output path to print the TIRP
         :return: None - a file with the TIRPs
         """
-        try:
-            os.remove(path)
-        except OSError:
-            pass
         for tirp in self.frequent_tirps:
             tirp.print_tirp(path,self._karma._num_relations)

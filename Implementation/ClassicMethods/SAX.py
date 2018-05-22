@@ -7,7 +7,7 @@ from Implementation.Constants import EPSILON
 from Implementation.Entity import Entity
 from Implementation.TD4C.TD4C import TD4C
 from Implementation.TimeStamp import TimeStamp
-
+from Implementation.AbstractDiscretisation import Discretization
 from sklearn.cluster import KMeans as KM
 import numpy as np
 
@@ -28,17 +28,13 @@ class SAX(Discretization):
 
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
                        property_to_timestamps: Dict[int, List[TimeStamp]]) -> Dict[int, List[float]]:
-        equal_frequency = EqualFrequency(100)
-        m1, m2, m3 = equal_frequency.discretize(property_to_entities, class_to_entities, property_to_timestamps)
-        self.candidate_cutpoints = equal_frequency.bins_cutpoints
         cutpoints = {}
         for p in property_to_timestamps.keys():
-            cutpoints[p] = self.set_bin_ranges_for_property(m1,m2,m3,p)
-        #cutpoints = self.parallel_cutpoint_set(m1, m2, m3)
+            cutpoints[p] = self.set_bin_ranges_for_property(property_to_entities,class_to_entities,property_to_timestamps,p)
         return cutpoints
 
     def get_discretization_name(self) -> str:
-        pass
+        return "SAX_%s_%s" % (self.bin_count,self.max_gap)
 
     def write_auxiliary_information(self, property_to_entities: Dict[int, Set[Entity]],
                                     class_to_entities: Dict[int, Set[Entity]],
@@ -49,44 +45,10 @@ class SAX(Discretization):
                                     class_to_entities: Dict[int, Set[Entity]],
                                     property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int) -> List[
         float]:
-        candidate_cutoffs: List[float] = sorted(self.candidate_cutpoints[property_id])
-        print("%s: %s" % (property_id,candidate_cutoffs))
-        state_count = (len(candidate_cutoffs) + 1)
-        A = np.zeros(shape=(state_count, state_count))
-        state_vector = [0]*state_count
-        chosen_cutoffs = SortedList()
-        chosen_cutoffs_indices = SortedList()
+        val_arr = np.array([x.value for x in property_to_timestamps[property_id]])
+        mean_val = val_arr.mean()
+        std_val = val_arr.std()
 
-        for e in property_to_entities[property_id]:
-            time_stamps = sorted(e.properties[property_id])
-
-            for i in range(len(time_stamps)-1):
-                prev = time_stamps[i]
-                now = time_stamps[i+1]
-                A[now.value][prev.value] += 1
-                state_vector[prev.value] += 1
-            state_vector[time_stamps[-1].value] += 1
-
-        for i in range(self.bin_count - 1):
-            max_distance = float('-inf')
-            best_cutoff = float('-inf')
-            best_index = float('-inf')
-            for j in range(len(candidate_cutoffs)):
-                cutoff = candidate_cutoffs[j]
-                if j in chosen_cutoffs_indices:
-                    continue
-                temp_cutoff_indices = chosen_cutoffs_indices.copy()
-                temp_cutoff_indices.add(j)
-                new_A = self.collapse_matrix(A, temp_cutoff_indices)
-                distance_of_series = self.distance_measure(new_A, state_vector)
-                if distance_of_series > max_distance:
-                    max_distance = distance_of_series
-                    best_cutoff = cutoff
-                    best_index = j
-            chosen_cutoffs.add(best_cutoff)
-            chosen_cutoffs_indices.add(best_index)
-
-        return list(chosen_cutoffs)
 
 class __SAX__(object):
     """
@@ -227,9 +189,30 @@ class __SAX__(object):
 
         return DataFrame(ans)
 
+    def perform_discretization_framework(self, property_to_timestamps):
+        ans = {}
+        for property_id in property_to_timestamps:
+            values = [x.value for x in property_to_timestamps[property_id]]
+            symbols_data = self.to_symbols(values)
+            for i in range(len(property_to_timestamps[property_id])):
+                property_to_timestamps[property_id][i].value = values[i]
+
+        return self.__build_limits(self._alphabet_size)
+
+    def discretize(self, p2e, c2e, p2t):
+        m1,m2,m3 = Discretization.get_copy_of_maps(p2e,c2e,p2t)
+        cutpoints = self.perform_discretization_framework(m3)
+        return m1,m2,m3,cutpoints
+
+
+def use_sax(bin_count,window_size,p2e,c2e,p2t):
+    sax = __SAX__(int(window_size),int(bin_count))
+    return sax.discretize(p2e,c2e,p2t)
+
 if __name__ == '__main__':
-    sax = __SAX__(points_amount=3, alphabet=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'K']);
+    max_bin = 3
+    sax = __SAX__(points_amount=3, alphabet=[str(i) for i in range(max_bin)])
     df = DataFrame(np.random.randint(0, 556, size=1668))
     print(df)
-    df_disc = sax.perform_discritization(df, True)
+    df_disc = sax.perform_discritization(df, False)
     print(df_disc)

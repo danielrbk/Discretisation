@@ -78,8 +78,6 @@ class Karma(object):
         return (x._start_time,x._end_time,float(x._symbol))
 
 
-
-
     def parse_file_into_symbolic_time_intervals_parts(self, file_path, start_index,symbol_type,num_comma):
         """
         parse the file to a map of entities with their symbolic time intervals

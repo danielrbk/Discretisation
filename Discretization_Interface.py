@@ -3,17 +3,19 @@ import sys
 from typing import List, Dict, Tuple
 from os import makedirs
 from os.path import exists
-from Implementation.ClassicMethods import Binary, EQF, EQW, Expert, KMeans, Persist, SAX
+from Implementation.ClassicMethods import Binary, EQF, EQW, KMeans, Persist
+from Implementation.ClassicMethods.Expert import Expert
+from Implementation.ClassicMethods.SAX import use_sax
 from Implementation.InputHandler import get_maps_from_file
 from Implementation.OutputHandling.Discretization_Out_Handler import convert_cutpoints_to_output
 from Implementation.TD4C.TD4C import TD4C
 #from RunKL import run_KL
 from RunKL import run_KL
 
-methods_names_to_functions = {"BINARY": Binary.Binary, "EQF": EQF.EqualFrequency, "EQW": EQW.EqualWidth, "EXPERT": Expert.Expert,
-                              "KMEANS": KMeans.KMeans, "PERSIST": Persist.Persist, "SAX": SAX, "TD4C": TD4C}
+methods_names_to_functions = {"BINARY": Binary.Binary, "EQF": EQF.EqualFrequency, "EQW": EQW.EqualWidth,
+                              "KMEANS": KMeans.KMeans, "PERSIST": Persist.Persist, "TD4C": TD4C}
 
-CLASS_SEPERATOR = 55
+CLASS_SEPERATOR = -1
 
 
 def run_method(input_path, output_path_folder, method_name, args):
@@ -78,6 +80,7 @@ def run_methods(root_folder, list_of_paths: List[str]):
             method_name = running_configuration[0]
             args = running_configuration[1]
             output_path_folder = "%s\\%s\\%s\\%s" % (root_folder, file_id, method_name, args)
+            vmap_path = "%s\\%s\\%s" % (root_folder,file_id,"vmap.csv")
             if not exists(output_path_folder):
                 makedirs(output_path_folder)
             args = args.split("_")
@@ -86,22 +89,35 @@ def run_methods(root_folder, list_of_paths: List[str]):
                     run_KL(input_path, output_path_folder, *args)
                     pass
                 elif discretizable:
-                    d = methods_names_to_functions[method_name](*args)
-                    d1, d2, d3 = d.discretize(m1, m2, m3)
-                    convert_cutpoints_to_output(d2, output_path_folder, file_id, d.get_discretization_name())
-                    d.write_auxiliary_information(d1, d2, d3, output_path_folder)
-                    with open(output_path_folder + "\\" + "cut_points.txt", 'w') as f:
-                        f.write(d.bins_cutpoints.__str__())
+                    if method_name == "SAX":
+                        d1, d2, d3, cutpoints = use_sax(args[0], args[1], m1, m2, m3)
+                        convert_cutpoints_to_output(cutpoints,d1,d2,d3, output_path_folder, file_id, "SAX_%s_%s" % (args[0], args[1]), vmap_path)
+                    elif method_name == "EXPERT":
+                        dict_path = output_path_folder + "\\dict.csv"
+                        d = Expert(Expert.load_path_into_dictionary(dict_path))
+                        d1, d2, d3 = d.discretize(m1, m2, m3)
+                        convert_cutpoints_to_output(d.bins_cutpoints, d1, d2, d3, output_path_folder, file_id,
+                                                    d.get_discretization_name(), vmap_path)
+                        d.write_auxiliary_information(d1, d2, d3, output_path_folder)
+                        with open(output_path_folder + "\\" + "cut_points.txt", 'w') as f:
+                            f.write(d.bins_cutpoints.__str__())
+                    else:
+                        d = methods_names_to_functions[method_name](*args)
+                        d1, d2, d3 = d.discretize(m1, m2, m3)
+                        convert_cutpoints_to_output(d.bins_cutpoints,d1,d2,d3, output_path_folder, file_id, d.get_discretization_name(),vmap_path)
+                        d.write_auxiliary_information(d1, d2, d3, output_path_folder)
+                        with open(output_path_folder + "\\" + "cut_points.txt", 'w') as f:
+                            f.write(d.bins_cutpoints.__str__())
                 with open(output_path_folder + "\\" + "finished.log", 'w') as f:
                     f.write(
                         "----FINISHED!----\nDate: %s\nInput file: %s\nOutput path: %s\nMethod: %s\nArgs: %s\n" % (
                             datetime.datetime.now(), input_path, output_path_folder, method_name, args))
-                with open(r"C:\Users\rejabek\Server\python_happy_log.txt", 'a') as f:
+                with open(r"C:\Users\Daniel Rejabek\python_happy_log.txt", 'a') as f:
                     f.write(
                         "--------------------\nDate: %s\nInput file: %s\nOutput path: %s\nMethod: %s\nArgs: %s\n" % (
                             datetime.datetime.now(), input_path, output_path_folder, method_name, args))
             except Exception as e:
-                with open(r"C:\Users\rejabek\Server\python_sad_log.txt", 'a') as f:
+                with open(r"C:\Users\Daniel Rejabek\python_sad_log.txt", 'a') as f:
                     f.write(
                         "--------------------\nDate: %s\nInput file: %s\nOutput path: %s\nMethod: %s\nArgs: %s\nError: %s\n" % (
                         datetime.datetime.now(), input_path, output_path_folder, method_name, args, e))
