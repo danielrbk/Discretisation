@@ -2,10 +2,11 @@ from Implementation.TimeInterval import TimeInterval
 
 
 class TimeStamp(object):
-    def __init__(self, temporal_property_value, time: TimeInterval, ts_class=None):
+    def __init__(self, temporal_property_value, time: TimeInterval, entity_id: int, ts_class=None):
         self.time = time
         self.value = temporal_property_value
         self.ts_class = ts_class
+        self.entity_id = entity_id
 
     def __str__(self):
         if self.ts_class is not None:

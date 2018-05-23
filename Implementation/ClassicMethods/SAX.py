@@ -3,6 +3,7 @@ from Implementation.AbstractDiscretisation import Discretization
 from typing import Dict, List, Set, Counter
 
 from Implementation.BinInterval import BinInterval
+from Implementation.ClassicMethods.EQF import EqualFrequency
 from Implementation.Constants import EPSILON
 from Implementation.Entity import Entity
 from Implementation.TD4C.TD4C import TD4C

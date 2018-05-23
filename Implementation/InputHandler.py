@@ -1,4 +1,4 @@
-from os.path import splitext
+from os.path import splitext, exists
 
 import os
 
@@ -38,12 +38,26 @@ def extract_from_file(file_path, file_extension, class_separator, add_class_info
                         for p in ps:
                             for t in ps[p]:
                                 t.ts_class = c
-
-
-
         except:
             return False
     return True
+
+
+def partition_file_to_properties(file_path):
+    folder = file_path.split("\\")[:-1]
+    partitions_path = folder + "\\partitions"
+    if not exists(partitions_path):
+        with open(file_path) as f:
+            os.makedirs(partitions_path)
+            property_to_file = {}
+            for line in f:
+                dr = DataRow.get_data_from_row(line)
+                pid = dr.get_temporal_property_id()
+                if pid not in property_to_file:
+                    property_to_file[pid] = open(partitions_path + "\\property%s.csv" % pid)
+                property_to_file[pid].write(line)
+        for pid in property_to_file:
+            property_to_file[pid].close()
 
 
 def extract_from_file_all_lines(file_path, file_extension, class_separator) -> bool:
@@ -81,8 +95,10 @@ def write_output(discretizer: Discretization, class_to_entities: Dict[int, Set[E
 
 
 def get_maps_from_file(path, class_seperator, class_information=False):
+    #partition_file_to_properties(path)
     receive_file(path, class_seperator, class_information)
     return Entity.get_maps()
+    #return None, None, None
 
 
 if __name__ == "__main__":

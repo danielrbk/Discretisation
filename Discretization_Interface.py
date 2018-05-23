@@ -6,6 +6,7 @@ from os.path import exists
 from Implementation.ClassicMethods import Binary, EQF, EQW, KMeans, Persist
 from Implementation.ClassicMethods.Expert import Expert
 from Implementation.ClassicMethods.SAX import use_sax
+from Implementation.Constants import CLASS_SEPARATOR
 from Implementation.InputHandler import get_maps_from_file
 from Implementation.OutputHandling.Discretization_Out_Handler import convert_cutpoints_to_output
 from Implementation.TD4C.TD4C import TD4C
@@ -14,8 +15,6 @@ from RunKL import run_KL
 
 methods_names_to_functions = {"BINARY": Binary.Binary, "EQF": EQF.EqualFrequency, "EQW": EQW.EqualWidth,
                               "KMEANS": KMeans.KMeans, "PERSIST": Persist.Persist, "TD4C": TD4C}
-
-CLASS_SEPERATOR = -1
 
 
 def run_method(input_path, output_path_folder, method_name, args):
@@ -33,7 +32,7 @@ def run_method(input_path, output_path_folder, method_name, args):
         print(args[0])
         dataset_name = input_path.split('\\')[-1][:-4]
         d = methods_names_to_functions[method_name](*args)
-        m1, m2, m3 = get_maps_from_file(input_path, CLASS_SEPERATOR)
+        m1, m2, m3 = get_maps_from_file(input_path, CLASS_SEPARATOR)
         d1, d2, d3 = d.discretize(m1, m2, m3)
         s = d.bins_cutpoints.__str__()
         convert_cutpoints_to_output(d2, output_path_folder, dataset_name, d.get_discretization_name())
@@ -73,7 +72,7 @@ def run_methods(root_folder, list_of_paths: List[str]):
         input_path = "%s\\%s\\%s.csv" % (root_folder, file_id, file_id)
         discretizable = True
         try:
-            m1, m2, m3 = get_maps_from_file(input_path, CLASS_SEPERATOR)
+            m1, m2, m3 = get_maps_from_file(input_path, CLASS_SEPARATOR)
         except:
             discretizable = False
         for running_configuration in file_to_runs[file_id]:

@@ -25,6 +25,6 @@ class DataRow(object):
         time = int(line[2])
         time_interval = TimeInterval(time, time)
         val = float(line[3])
-        time_stamp = TimeStamp(val, time_interval)
+        time_stamp = TimeStamp(val, time_interval, eid)
         return DataRow(eid, tid, time_stamp)
 
