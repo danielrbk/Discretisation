@@ -1,6 +1,6 @@
 from sortedcontainers import SortedList
 from Implementation.AbstractDiscretisation import Discretization
-from typing import Dict, List, Set, Counter
+from typing import Dict, List, Set, Counter, Tuple
 
 from Implementation.BinInterval import BinInterval
 from Implementation.ClassicMethods.EQF import EqualFrequency
@@ -23,9 +23,12 @@ class SaxConstrainsException(Exception): pass
 
 
 class SAX(Discretization):
-    def __init__(self, bin_count, max_gap):
+    def get_map_used(self):
+        return "property_to_timestamps"
+
+    def __init__(self, bin_count, max_gap, window_size):
         super(SAX, self).__init__(max_gap)
-        self.bin_count = bin_count
+        self.SAX_OBJECT = __SAX__(int(bin_count),int(window_size))
 
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
                        property_to_timestamps: Dict[int, List[TimeStamp]]) -> Dict[int, List[float]]:
@@ -46,9 +49,23 @@ class SAX(Discretization):
                                     class_to_entities: Dict[int, Set[Entity]],
                                     property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int) -> List[
         float]:
-        val_arr = np.array([x.value for x in property_to_timestamps[property_id]])
-        mean_val = val_arr.mean()
-        std_val = val_arr.std()
+        if not property_to_timestamps:
+            self.load_property_to_timestamps(property_to_timestamps, property_id)
+        return self.SAX_OBJECT.perform_discretization_framework(property_to_timestamps)
+
+    def discretize_property(self, property_to_entities: Dict[int, Set[Entity]],
+                            class_to_entities: Dict[int, Set[Entity]],
+                            property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int) -> Tuple[
+        Dict[int, Set['Entity']], Dict[int, Set['Entity']], Dict[int, List[TimeStamp]]]:
+        self.bins_cutpoints[property_id] = self.set_bin_ranges_for_property(property_to_entities, class_to_entities,
+                                                                            property_to_timestamps, property_id)
+        property_to_timestamps = self.get_copy_of_property_to_timestamps(property_to_timestamps)
+        self.set_bin_ranges_from_cutpoints_for_property(property_id)
+        self.abstract_property_in_property_to_timestamps(property_to_timestamps,property_id)
+        return property_to_entities,class_to_entities,property_to_timestamps
+
+
+
 
 
 class __SAX__(object):
@@ -197,7 +214,6 @@ class __SAX__(object):
             symbols_data = self.to_symbols(values)
             for i in range(len(property_to_timestamps[property_id])):
                 property_to_timestamps[property_id][i].value = values[i]
-
         return self.__build_limits(self._alphabet_size)
 
     def discretize(self, p2e, c2e, p2t):

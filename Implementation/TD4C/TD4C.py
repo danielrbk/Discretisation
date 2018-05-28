@@ -2,7 +2,7 @@ from Implementation.AbstractDiscretisation import Discretization
 from typing import Dict, List, Set
 from collections import Counter
 from Implementation.BinInterval import BinInterval
-from Implementation.Constants import EPSILON
+from Implementation.Constants import EPSILON, debug_print
 from Implementation.Entity import Entity
 from Implementation.TimeStamp import TimeStamp
 from Implementation.ClassicMethods.EQF import EqualFrequency
@@ -13,6 +13,9 @@ import numpy as np
 
 
 class TD4C(Discretization):
+
+    def get_map_used(self):
+        return "property_to_timestamps"
 
     def __init__(self, bin_count, distance_measure, max_gap, ACCURACY_MEASURE = 100):
         super(TD4C, self).__init__(max_gap)
@@ -44,6 +47,10 @@ class TD4C(Discretization):
     def set_bin_ranges_for_property(self, property_to_entities: Dict[int, Set[Entity]],
                                      class_to_entities: Dict[int, Set[Entity]],
                                     property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int):
+        class_to_entities, candidates = EqualFrequency.load_candidate_cuts(property_to_entities,class_to_entities,
+                                                                           property_to_timestamps,property_id, self.ACCURACY_MEASURE, self.property_folder)
+        class_to_entities = self.property_to_timestamps_to_class_to_entities(class_to_entities)
+        self.candidate_cutpoints = candidates
         candidate_cutoffs: List[float] = sorted(self.candidate_cutpoints[property_id])
         chosen_cutoffs = SortedList()
         chosen_cutoffs_indices = SortedList()
@@ -51,11 +58,9 @@ class TD4C(Discretization):
 
         class_to_state_vector = TD4C.populate_state_vector(property_to_entities, class_to_entities, property_to_timestamps, len(candidate_cutoffs), property_id)
 
-
-
         chosen_scores = []
         iterations_scores_and_cutoffs = []
-        print("\n---------------------%s----------------------" % property_id)
+        debug_print("\n---------------------%s----------------------" % property_id)
         for i in range(self.bin_count - 1):
             scores_and_cutoffs = []
             max_distance = float('-inf')
@@ -74,7 +79,7 @@ class TD4C(Discretization):
                     max_distance = distance_of_series
                     best_cutoff = cutoff
                     best_index = j
-            print("%s: %s" % (best_cutoff, scores_and_cutoffs))
+            debug_print("%s: %s" % (best_cutoff, scores_and_cutoffs))
             iterations_scores_and_cutoffs.append(scores_and_cutoffs)
             chosen_cutoffs.add(best_cutoff)
             chosen_cutoffs_indices.add(best_index)
@@ -194,7 +199,7 @@ class TD4C(Discretization):
         for c in class_to_entities.keys():
             class_to_state_vector[c] = [0]*(number_of_cutoffs+1)
             ctrs = [Counter([int(ts.value) for ts in entity.properties[property_id]]) for entity in
-                    class_to_entities[c] if entity in property_to_entities[property_id]]
+                    class_to_entities[c]]
             ctr = sum(ctrs, Counter())
             for state in ctr.keys():
                 class_to_state_vector[c][state] += ctr[state]

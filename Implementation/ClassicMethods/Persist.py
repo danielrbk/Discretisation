@@ -5,7 +5,7 @@ from typing import Dict, List, Set, Counter
 
 from Implementation.BinInterval import BinInterval
 from Implementation.ClassicMethods.EQF import EqualFrequency
-from Implementation.Constants import EPSILON
+from Implementation.Constants import EPSILON, debug_print
 from Implementation.Entity import Entity
 from Implementation.TD4C.TD4C import TD4C
 from Implementation.TimeStamp import TimeStamp
@@ -15,6 +15,9 @@ import numpy as np
 
 
 class Persist(Discretization):
+    def get_map_used(self):
+        return "property_to_timestamps"
+
     def __init__(self, bin_count, max_gap):
         super(Persist, self).__init__(max_gap)
         self.bin_count = int(bin_count)
@@ -42,8 +45,13 @@ class Persist(Discretization):
                                     class_to_entities: Dict[int, Set[Entity]],
                                     property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int) -> List[
         float]:
+        property_to_entities, candidates = EqualFrequency.load_candidate_cuts(property_to_entities, class_to_entities,
+                                                                           property_to_timestamps, property_id,
+                                                                           100, self.property_folder)
+        property_to_entities = self.property_to_timestamps_to_property_to_entity(property_to_entities)
+        self.candidate_cutpoints = candidates
         candidate_cutoffs: List[float] = sorted(self.candidate_cutpoints[property_id])
-        print("%s: %s" % (property_id,candidate_cutoffs))
+        debug_print("%s: %s" % (property_id,candidate_cutoffs))
         state_count = (len(candidate_cutoffs) + 1)
         A = np.zeros(shape=(state_count, state_count))
         state_vector = [0]*state_count
@@ -78,7 +86,6 @@ class Persist(Discretization):
                     best_index = j
             chosen_cutoffs.add(best_cutoff)
             chosen_cutoffs_indices.add(best_index)
-
         return list(chosen_cutoffs)
 
     @staticmethod
@@ -105,9 +112,9 @@ class Persist(Discretization):
                 C = B.transpose()[prev:]
                 new_A[i][-1] = sum(sum(C))
         except:
-            print("C:",C)
-            print("A:",A)
-            print(cut_points)
+            debug_print("C:",C)
+            debug_print("A:",A)
+            debug_print(cut_points)
             raise
 
         return new_A

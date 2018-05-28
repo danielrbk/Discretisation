@@ -1,3 +1,6 @@
+from ctypes import c_int, c_uint, c_float
+
+from Implementation.Constants import FileFormatNotCorrect
 from Implementation.TimeStamp import TimeStamp
 from Implementation.TimeInterval import TimeInterval
 
@@ -19,12 +22,14 @@ class DataRow(object):
 
     @staticmethod
     def get_data_from_row(line: str) -> 'DataRow':
-        line = line.split(',')
-        eid = int(line[0])
-        tid = int(line[1])
-        time = int(line[2])
-        time_interval = TimeInterval(time, time)
-        val = float(line[3])
-        time_stamp = TimeStamp(val, time_interval, eid)
+        try:
+            line = line.rstrip().split(',')
+            eid = int(line[0])
+            tid = int(line[1])
+            time = int(line[2])
+            val = float(line[3])
+        except:
+            raise FileFormatNotCorrect()
+        time_stamp = TimeStamp(val, time,time, eid)
         return DataRow(eid, tid, time_stamp)
 

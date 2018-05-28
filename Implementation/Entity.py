@@ -8,10 +8,11 @@ class Entity(object):
     class_to_entities: Dict[int, Set['Entity']] = {}
     property_to_timestamps: Dict[int, List[TimeStamp]] = {}
 
-    def __init__(self, entity_id: int, class_separator: int = None):
+    def __init__(self, entity_id: int, entity_class, class_separator: int = None):
         self.entity_id: int = entity_id
         self.properties: Dict[int, List[TimeStamp]] = {}
         self.class_separator: int = class_separator
+        self.entity_class = entity_class
 
     @staticmethod
     def pair_property_entity(entity: 'Entity', temporal_property: int) -> None:
@@ -59,6 +60,11 @@ class Entity(object):
 
     def get_properties(self) -> Dict[int, List[TimeStamp]]:
         return self.properties
+
+    def deep_copy(self) -> 'Entity':
+        e = Entity(self.entity_id,self.entity_class,self.class_separator)
+        e.properties = {pid: [ts.deep_copy() for ts in self.properties[pid]] for pid in self.properties}
+        return e
 
     def __hash__(self):
         return self.entity_id.__hash__()

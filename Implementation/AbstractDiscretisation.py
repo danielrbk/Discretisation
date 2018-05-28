@@ -1,20 +1,19 @@
 from abc import ABC, abstractmethod
+from functools import reduce
 from multiprocessing.pool import ThreadPool
 
 from Implementation.BinInterval import BinInterval
 from typing import Dict, List, Set, Tuple
 
-from Implementation.Constants import THREAD_COUNT, CLASS_SEPARATOR
+from Implementation.Constants import THREAD_COUNT, CLASS_SEPARATOR, debug_print
 from Implementation.DataRow import DataRow
 from Implementation.Entity import Entity
 from Implementation.TimeStamp import TimeStamp
+from Tests.Constants import deep_getsizeof
 
 
 class Discretization(ABC):
     bin_id = 0
-    refresh_class_to_entity = False
-    refresh_property_to_entity = False
-    refresh_property_to_timestamps = False
 
     def __init__(self, interval_max_gap):
         self.max_gap: int = int(interval_max_gap)
@@ -113,21 +112,23 @@ class Discretization(ABC):
         cutpoints = {property_ids[i]: results[i] for i in range(len(property_ids))}
         return cutpoints
 
-    def set_bin_ranges_from_cutpoints(self) -> None:
+    def set_bin_ranges_from_cutpoints_for_property(self, property_id) -> None:
         """
         Induces the OOP version of bin cutpoints on the discretization object, by using the class BinInterval
         :return: None
         """
-        for property_id in self.bins_cutpoints.keys():
-            self.bin_symbol = -1
-            bin_cutpoints = self.bins_cutpoints[property_id]
-            if len(bin_cutpoints) == 0:
-                continue
+        self.bin_symbol = -1
+        bin_cutpoints = self.bins_cutpoints[property_id]
+        if len(bin_cutpoints) != 0:
             bin_ranges = [BinInterval(property_id, self.get_symbol(), float('-inf'), bin_cutpoints[0])]
             for i in range(1, len(bin_cutpoints)):
                 bin_ranges.append(BinInterval(property_id, self.get_symbol(), bin_cutpoints[i - 1], bin_cutpoints[i]))
             bin_ranges.append(BinInterval(property_id, self.get_symbol(), bin_cutpoints[-1], float('inf')))
             self.property_to_ranges[property_id] = bin_ranges
+
+    def set_bin_ranges_from_cutpoints(self):
+        for property_id in self.bins_cutpoints:
+            self.set_bin_ranges_from_cutpoints_for_property(property_id)
 
     def get_symbol(self) -> int:
         """
@@ -162,8 +163,28 @@ class Discretization(ABC):
                             class_to_entities: Dict[int, Set[Entity]],
                             property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int) -> Tuple[
         Dict[int, Set['Entity']], Dict[int, Set['Entity']], Dict[int, List[TimeStamp]]]:
+        print("Getting cutpoints")
         self.bins_cutpoints[property_id] = self.set_bin_ranges_for_property(property_to_entities, class_to_entities,
                                                                             property_to_timestamps, property_id)
+        print("Got cutpoints, getting copy of map")
+        if property_to_timestamps:
+            property_to_timestamps = self.get_copy_of_property_to_timestamps(property_to_timestamps)
+        elif property_to_entities:
+            property_to_entities = self.get_copy_of_property_to_entities(property_to_entities)
+        else:
+            class_to_entities = self.get_copy_of_class_to_entities(class_to_entities)
+        print("Abstracting copy")
+        self.set_bin_ranges_from_cutpoints_for_property(property_id)
+        self.abstract_property(property_to_entities,class_to_entities,property_to_timestamps,property_id)
+        return property_to_entities,class_to_entities,property_to_timestamps
+
+    def discretize_property_without_abstracting(self, property_to_entities: Dict[int, Set[Entity]],
+                            class_to_entities: Dict[int, Set[Entity]],
+                            property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int):
+        print("Getting cutpoints")
+        self.bins_cutpoints[property_id] = self.set_bin_ranges_for_property(property_to_entities, class_to_entities,
+                                                                            property_to_timestamps, property_id)
+        print("Got cutpoints, getting copy of map")
 
 
     def abstract(self,  property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
@@ -182,7 +203,7 @@ class Discretization(ABC):
                 entities = property_to_entities[property_id]
                 for entity in entities:
                     time_stamps: List[TimeStamp] = entity.properties[property_id]
-                    sorted_time_stamps = sorted(time_stamps, key=lambda ts: (ts.value,ts.time.start_point))
+                    sorted_time_stamps = sorted(time_stamps, key=lambda ts: (ts.value,ts.start_point))
                     ts_index = 0
                     new_timestamps = []
                     prev_ts = None
@@ -196,8 +217,8 @@ class Discretization(ABC):
                             prev_ts = curr_ts
                             curr_val = curr_ts.value
                         else:
-                            if curr_ts.time.start_point - prev_ts.time.end_point - 1 <= self.max_gap:
-                                prev_ts.time.end_point = curr_ts.time.end_point
+                            if curr_ts.start_point - prev_ts.end_point - 1 <= self.max_gap:
+                                prev_ts.end_point = curr_ts.end_point
                             else:
                                 new_timestamps.append(prev_ts)
                                 prev_ts = curr_ts
@@ -206,20 +227,26 @@ class Discretization(ABC):
                         ts_index += 1
                     entity.properties[property_id] = new_timestamps
                     property_to_timestamps[property_id] += new_timestamps
-                property_to_timestamps[property_id] = sorted(property_to_timestamps[property_id], key=lambda ts: ts.time.start_point)
+                property_to_timestamps[property_id] = sorted(property_to_timestamps[property_id], key=lambda ts: ts.start_point)
 
     def abstract_property(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
                    property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int):
+        if property_to_timestamps:
+            l = sorted(property_to_timestamps[property_id], key=lambda ts: ts.value)
+            i = 0
+            for val in l:
+                self.transform(property_id, val)
+                i += 1
+            self.bin_id = 0
+            self.abstract_property_in_property_to_timestamps(property_to_timestamps,property_id)
+        elif property_to_entities:
+            self.abstract_property_in_property_to_entities(property_to_entities, property_id)
+        else:
+            self.abstract_property_in_class_to_entities(class_to_entities,property_id)
 
     def abstract_property_in_property_to_timestamps(self, property_to_timestamps: Dict[int, List[TimeStamp]], property_id):
-        l = sorted(property_to_timestamps[property_id], key=lambda ts: ts.value)
-        i = 0
-        for val in l:
-            self.transform(property_id, val)
-            i += 1
-        self.bin_id = 0
         if self.max_gap >= 0:
-            property_to_timestamps[property_id] = []
+            updated_list = []
             entities: Dict[int, List[TimeStamp]] = {}
             for ts in property_to_timestamps[property_id]:
                 e = ts.entity_id
@@ -227,12 +254,13 @@ class Discretization(ABC):
                     entities[e] = [ts]
                 else:
                     entities[e].append(ts)
-            for time_stamps in entities:
-                sorted_time_stamps = sorted(time_stamps, key=lambda ts: (ts.value,ts.time.start_point))
+            for e in entities:
+                time_stamps = entities[e]
+                sorted_time_stamps = sorted(time_stamps, key=lambda ts: (ts.value,ts.start_point))
                 ts_index = 0
                 new_timestamps = []
                 prev_ts = None
-                curr_val = -100
+                curr_val = float('-inf')
                 # connect time stamps
                 while ts_index < len(sorted_time_stamps):
                     curr_ts = sorted_time_stamps[ts_index]
@@ -242,16 +270,16 @@ class Discretization(ABC):
                         prev_ts = curr_ts
                         curr_val = curr_ts.value
                     else:
-                        if curr_ts.time.start_point - prev_ts.time.end_point - 1 <= self.max_gap:
-                            prev_ts.time.end_point = curr_ts.time.end_point
+                        if curr_ts.start_point - prev_ts.end_point - 1 <= self.max_gap:
+                            prev_ts.end_point = curr_ts.end_point
                         else:
                             new_timestamps.append(prev_ts)
                             prev_ts = curr_ts
                     if ts_index + 1 == len(sorted_time_stamps):
                         new_timestamps.append(prev_ts)
                     ts_index += 1
-                property_to_timestamps[property_id] += new_timestamps
-            property_to_timestamps[property_id] = sorted(property_to_timestamps[property_id], key=lambda ts: ts.time.start_point)
+                updated_list += new_timestamps
+            property_to_timestamps[property_id] = sorted(updated_list, key=lambda ts: ts.start_point)
 
     def abstract_property_in_property_to_entities(self, property_to_entities: Dict[int, Set[Entity]], property_id):
         property_to_timestamps: Dict[int, List[TimeStamp]] = {property_id: []}
@@ -266,19 +294,14 @@ class Discretization(ABC):
         self.bin_id = 0
         if self.max_gap >= 0:
             property_to_timestamps[property_id] = []
-            entities: Dict[int, List[TimeStamp]] = {}
-            for ts in property_to_timestamps[property_id]:
-                e = ts.entity_id
-                if e not in entities:
-                    entities[e] = [ts]
-                else:
-                    entities[e].append(ts)
-            for time_stamps in entities:
-                sorted_time_stamps = sorted(time_stamps, key=lambda ts: (ts.value,ts.time.start_point))
+            entities = property_to_entities[property_id]
+            for entity in entities:
+                time_stamps: List[TimeStamp] = entity.properties[property_id]
+                sorted_time_stamps = sorted(time_stamps, key=lambda ts: (ts.value, ts.start_point))
                 ts_index = 0
                 new_timestamps = []
                 prev_ts = None
-                curr_val = -100
+                curr_val = float('-inf')
                 # connect time stamps
                 while ts_index < len(sorted_time_stamps):
                     curr_ts = sorted_time_stamps[ts_index]
@@ -288,16 +311,24 @@ class Discretization(ABC):
                         prev_ts = curr_ts
                         curr_val = curr_ts.value
                     else:
-                        if curr_ts.time.start_point - prev_ts.time.end_point - 1 <= self.max_gap:
-                            prev_ts.time.end_point = curr_ts.time.end_point
+                        if curr_ts.start_point - prev_ts.end_point - 1 <= self.max_gap:
+                            prev_ts.end_point = curr_ts.end_point
                         else:
                             new_timestamps.append(prev_ts)
                             prev_ts = curr_ts
                     if ts_index + 1 == len(sorted_time_stamps):
                         new_timestamps.append(prev_ts)
                     ts_index += 1
+                entity.properties[property_id] = new_timestamps
                 property_to_timestamps[property_id] += new_timestamps
-            property_to_timestamps[property_id] = sorted(property_to_timestamps[property_id], key=lambda ts: ts.time.start_point)
+            property_to_timestamps[property_id] = sorted(property_to_timestamps[property_id],
+                                                         key=lambda ts: ts.start_point)
+
+    def abstract_property_in_class_to_entities(self, class_to_entities: Dict[int, Set[Entity]], property_id):
+        property_to_entities = {property_id: set()}
+        for c in class_to_entities:
+            property_to_entities[property_id] = property_to_entities[property_id].union(class_to_entities[c])
+        self.abstract_property_in_property_to_entities(property_to_entities, property_id)
 
     def set_and_get_cutpoints(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
                    property_to_timestamps: Dict[int, List[TimeStamp]]) -> None:
@@ -341,7 +372,7 @@ class Discretization(ABC):
         pool.join()
         return {key_property: set(entities)}, c2e, {key_property: relevant_timestamps}
 
-    def load_property_to_entity(self, property_id: int, property_to_entities: Dict[int, Set['Entity']]) -> Dict[int, Set['Entity']]:
+    def load_property_to_entity(self, property_to_entities: Dict[int, Set['Entity']], property_id: int) -> Dict[int, Set['Entity']]:
         property_to_entities[property_id] = set()
         entities: Dict[int, Entity] = {}
         with open(self.property_folder + "\\property%s.csv" % property_id) as f:
@@ -351,24 +382,10 @@ class Discretization(ABC):
                 if eid in entities:
                     e = entities[eid]
                 else:
-                    e = Entity(eid, CLASS_SEPARATOR)
+                    e = Entity(eid, 0, CLASS_SEPARATOR)
                     property_to_entities[property_id].add(e)
                     entities[eid] = e
-                e.properties[property_id].append(dr.get_time_stamp())
-        return property_to_entities
-
-    def load_class_to_entity(self, property_id: int, class_to_entities: Dict[int, Set['Entity']]) -> Dict[int, Set['Entity']]:
-        entities: Dict[int, Entity] = {}
-        with open(self.property_folder + "\\property%s.csv" % property_id) as f:
-            for line in f:
-                dr = DataRow.get_data_from_row(line)
-                eid = dr.get_entity_id()
-                if eid in entities:
-                    e = entities[eid]
-                else:
-                    e = Entity(eid, CLASS_SEPARATOR)
-                    class_to_entities[property_id].add(e)
-                    entities[eid] = e
+                    e.properties[property_id] = []
                 e.properties[property_id].append(dr.get_time_stamp())
         with open(self.property_folder + "\\property%s.csv" % CLASS_SEPARATOR) as f:
             for line in f:
@@ -377,17 +394,73 @@ class Discretization(ABC):
                 if eid in entities:
                     e = entities[eid]
                     c = int(dr.get_time_stamp().value)
-                    if c not in class_to_entities:
-                        class_to_entities[c] = set()
-                    class_to_entities[c].add(e)
-        return class_to_entities
+                    e.entity_class = c
+                    for pid in e.properties:
+                        for ts in e.properties[pid]:
+                            ts.ts_class = c
+        return property_to_entities
 
-    def load_property_to_timestamps(self, property_id: int, property_to_timestamps: Dict[int, List[TimeStamp]]) -> Dict[int, List[TimeStamp]]:
-        property_to_timestamps[property_id] = []
+    def load_class_to_entity(self, class_to_entities: Dict[int, Set['Entity']], property_id: int) -> Dict[int, Set['Entity']]:
+        entities: Dict[int, Entity] = {}
         with open(self.property_folder + "\\property%s.csv" % property_id) as f:
             for line in f:
                 dr = DataRow.get_data_from_row(line)
-                property_to_timestamps[property_id].append(dr.get_time_stamp())
+                eid = dr.get_entity_id()
+                if eid in entities:
+                    e = entities[eid]
+                else:
+                    e = Entity(eid, 0, CLASS_SEPARATOR)
+                    entities[eid] = e
+                    e.properties[property_id] = []
+                e.properties[property_id].append(dr.get_time_stamp())
+        with open(self.property_folder + "\\property%s.csv" % CLASS_SEPARATOR) as f:
+            for line in f:
+                dr = DataRow.get_data_from_row(line)
+                eid = dr.get_entity_id()
+                if eid in entities:
+                    e = entities[eid]
+                    c = int(dr.get_time_stamp().value)
+                    e.entity_class = c
+                    if c not in class_to_entities:
+                        class_to_entities[c] = set()
+                    class_to_entities[c].add(e)
+                    for pid in e.properties:
+                        for ts in e.properties[pid]:
+                            ts.ts_class = c
+        return class_to_entities
+
+    def load_property_to_timestamps(self,  property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int) -> Dict[int, List[TimeStamp]]:
+        property_to_timestamps[property_id] = []
+        entity_to_timestamps: Dict[int,List[TimeStamp]] = {}
+        entity_count = 0
+        with open(self.property_folder + "\\property%s.csv" % property_id) as f:
+            for line in f:
+                dr = DataRow.get_data_from_row(line)
+                eid = dr.get_entity_id()
+                if eid in entity_to_timestamps:
+                    entity_to_timestamps[eid].append(dr.get_time_stamp())
+                else:
+                    entity_count += 1
+                    if entity_count % 10000 == 0:
+                        print("Total entities read: %s" % entity_count)
+                        #debug_print("Memory used by map: %s" % (deep_getsizeof(entity_to_timestamps,set()) / (1024*1024)))
+                    entity_to_timestamps[eid] = [dr.get_time_stamp()]
+                del dr
+        with open(self.property_folder + "\\property%s.csv" % CLASS_SEPARATOR) as f:
+            for line in f:
+                dr = DataRow.get_data_from_row(line)
+                eid = dr.get_entity_id()
+                c = int(dr.get_time_stamp().value)
+                if eid in entity_to_timestamps:
+                    for ts in entity_to_timestamps[eid]:
+                        ts.ts_class = c
+        combined_list = []
+        count = 0
+        lists = len(entity_to_timestamps.values())
+        for lst in entity_to_timestamps.values():
+            combined_list += lst
+        property_to_timestamps[property_id] = combined_list
+        del entity_to_timestamps
         return property_to_timestamps
 
     @staticmethod
@@ -405,7 +478,7 @@ class Discretization(ABC):
         property_to_entities: Dict[int, Set['Entity']] = {}
         class_to_entities: Dict[int, Set['Entity']] = {}
         property_to_timestamps: Dict[int, List[TimeStamp]] = {}
-        old_timestamp_to_new: Dict[Tuple, TimeStamp] = {ts: TimeStamp(ts.value, ts.time, ts.entity_id, ts.ts_class) for time_stamps in
+        old_timestamp_to_new: Dict[Tuple, TimeStamp] = {ts: TimeStamp.deep_copy(ts) for time_stamps in
                                                             old_property_to_timestamps.values() for ts in
                                                             time_stamps}
         property_to_timestamps = {property_id: [old_timestamp_to_new[ts] for ts in
@@ -416,7 +489,7 @@ class Discretization(ABC):
             class_to_entities[class_id] = set()
             for entity in old_class_to_entities[class_id]:
                 properties = entity.properties.copy()
-                e = Entity(entity.entity_id, entity.class_separator)
+                e = Entity(entity.entity_id, class_id, entity.class_separator)
 
                 properties = {key: [old_timestamp_to_new[ts] for ts in properties[key]] for key in properties.keys()}
                 property_ids = properties.keys()
@@ -428,3 +501,71 @@ class Discretization(ABC):
                 class_to_entities[class_id].add(e)
 
         return property_to_entities, class_to_entities, property_to_timestamps
+
+    @staticmethod
+    def get_copy_of_property_to_timestamps(old_property_to_timestamps: Dict[int,List[TimeStamp]]):
+        property_to_timestamps = {property_id: [ts.deep_copy() for ts in
+                                                old_property_to_timestamps[property_id]] for property_id in
+                                  old_property_to_timestamps.keys()}
+        return property_to_timestamps
+
+    @staticmethod
+    def get_copy_of_property_to_entities(old_property_to_entities: Dict[int, Set[Entity]]):
+        property_to_entities: Dict[int, Set[Entity]] = {property_id: set([e.deep_copy() for e
+                                                                          in old_property_to_entities[property_id]])
+                                                        for property_id in old_property_to_entities}
+        return property_to_entities
+
+    @staticmethod
+    def get_copy_of_class_to_entities(old_class_to_entities: Dict[int, Set[Entity]]):
+        class_to_entities: Dict[int, Set[Entity]] = {c: set([e.deep_copy() for e
+                                                                          in old_class_to_entities[c]])
+                                                        for c in old_class_to_entities}
+        return class_to_entities
+
+    @staticmethod
+    def property_to_timestamps_to_class_to_entities(property_to_timestamps: Dict[int, List[TimeStamp]]):
+        class_to_entities: Dict[int,Set[Entity]] = {}
+        entities: Dict[int, Entity] = {}
+        for property_id in property_to_timestamps:
+            for ts in property_to_timestamps[property_id]:
+                e_id = ts.entity_id
+                if e_id in entities:
+                    e = entities[e_id]
+                else:
+                    c = ts.ts_class
+                    if c not in class_to_entities:
+                        class_to_entities[c] = set()
+                    e = Entity(e_id,c,-1)
+                    entities[e_id] = e
+                    class_to_entities[c].add(e)
+                if property_id not in e.properties:
+                    e.properties[property_id] = []
+                e.properties[property_id].append(ts)
+        return class_to_entities
+
+    @staticmethod
+    def property_to_timestamps_to_property_to_entity(property_to_timestamps: Dict[int, List[TimeStamp]]):
+        property_to_entity: Dict[int, Set[Entity]] = {}
+        entities: Dict[int, Entity] = {}
+        for property_id in property_to_timestamps:
+            property_to_entity[property_id] = set()
+            for ts in property_to_timestamps[property_id]:
+                e_id = ts.entity_id
+                if e_id in entities:
+                    e = entities[e_id]
+                else:
+                    c = ts.ts_class
+                    e = Entity(e_id, c, -1)
+                    entities[e_id] = e
+                    property_to_entity[property_id].add(e)
+                if property_id not in e.properties:
+                    e.properties[property_id] = []
+                e.properties[property_id].append(ts)
+        return property_to_entity
+
+    @abstractmethod
+    def get_map_used(self):
+        pass
+
+

@@ -9,8 +9,17 @@ import numpy as np
 
 def get_test_result(output_path: str, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]], property_to_timestamps: Dict[int, List[TimeStamp]], discretization: Discretization) -> Tuple:
     expected_dict = {}
+    properties_file = "\\".join(output_path.split("\\")[:-1]) + "\\partitions\\properties.csv"
+    with open(properties_file) as f:
+        in_f = csv.reader(f)
+        for line in in_f:
+            property_ids = [int(x) for x in list(line)]
     expected = get_expected_output(output_path, expected_dict)
-    discretization.discretize(property_to_entities, class_to_entities,property_to_timestamps)
+    for property_id in property_ids:
+        property_to_entities = {}
+        class_to_entities = {}
+        property_to_timestamps = {}
+        discretization.discretize_property_without_abstracting(property_to_entities, class_to_entities,property_to_timestamps,property_id)
     real = discretization.bins_cutpoints
     return real, expected
 

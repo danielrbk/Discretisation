@@ -1,10 +1,139 @@
+import bisect
 import csv
-from typing import Dict, Set
+import os
+from math import floor
+from typing import Dict, Set, List
 
+from Implementation.TimeStamp import TimeStamp
 from Implementation.AbstractDiscretisation import Discretization
 from Implementation.ClassicMethods.EQW import EqualWidth
 from Implementation.Entity import Entity
 from Implementation.InputHandler import get_maps_from_file
+
+
+def write_partition(p2e: Dict[int, Set[Entity]], c2e: Dict[int, Set[Entity]], p2t: Dict[int, List[TimeStamp]],out_folder, property_id):
+    open_file = None
+    start = True
+    if p2t:
+        sorted_by_entity_start: List[TimeStamp] = sorted(p2t[property_id],key=lambda x: (x.ts_class,x.entity_id, x.start_point, x.end_point))
+        e_id = c_id = float('-inf')
+        for ts in sorted_by_entity_start:
+            if ts.ts_class != c_id:
+                start = True
+                if open_file is not None:
+                    open_file.close()
+                c_id = ts.ts_class
+                open_file = open(out_folder + "\\property%s_class%s.temp" % (property_id,c_id), 'w')
+            open_file.write("%s,%s,%s,%s\n" % (ts.start_point, ts.end_point, floor(ts.value), ts.entity_id))
+    elif p2e:
+        entities = sorted(p2e[property_id],key=lambda x:(x.entity_class,x.entity_id))
+        c_id = float('-inf')
+        for e in entities:
+            if e.entity_class != c_id:
+                start = True
+                if open_file is not None:
+                    open_file.close()
+                c_id = e.entity_class
+                open_file = open(out_folder + "\\property%s_class%s.temp" % (property_id,c_id), 'w')
+            for ts in e.properties[property_id]:
+                open_file.write("%s,%s,%s,%s\n" % (ts.start_point, ts.end_point, floor(ts.value), e.entity_id))
+    else:
+        for c_id in c2e:
+            with open(out_folder + "\\property%s_class%s.temp" % (property_id,c_id), 'w') as f:
+                for e in sorted(c2e[c_id], key=lambda x:x.entity_id):
+                    for ts in e.properties[property_id]:
+                        f.write("%s,%s,%s,%s\n" % (ts.start_point, ts.end_point, floor(ts.value), e.entity_id))
+
+
+def merge_partitions(out_folder, vmap_path, method_name,properties_list, class_list, class_to_entity_count, bins_cutpoints, entity_count):
+    folder_path = out_folder
+    states_path = folder_path + "\\" + "states.csv"
+    entities_path = folder_path + "\\" + "entities_class_"
+    property_to_base = {}
+    last_base = 0
+    cutpoints = bins_cutpoints
+    for key in sorted(cutpoints.keys()):
+        property_to_base[key] = last_base
+        last_base += len(cutpoints[key]) + 1
+
+    write_auxiliary_output(vmap_path,states_path,properties_list,bins_cutpoints,method_name)
+
+    if len(class_list) == 0:
+        class_list.append("None")
+        class_to_entity_count["None"] = entity_count
+    for c in class_list:
+        e_id = float('-inf')
+        with open(out_folder + "\\" + method_name + '_Class' + str(c) + '.txt', 'w') as f,\
+                open(out_folder + "\\karmalegov_Class" + str(c) + ".csv", 'w') as k_f:
+            f.write('startToncepts\n')
+            k_f.write('startToncepts\n')
+            f.write('numberOfEntities,' + str(class_to_entity_count[c]))
+            k_f.write('numberOfEntities,' + str(class_to_entity_count[c]))
+            property_to_file = {p: open(out_folder + "\\property%s_class%s.temp" % (p,c)) for p in properties_list}
+            property_to_line = {p: property_to_file[p].readline().rstrip().split(",") for p in properties_list}
+            lines = [(int(property_to_line[p][-1]),int(property_to_line[p][0]),int(property_to_line[p][1]),int(property_to_line[p][2]),p) for p in property_to_line]
+            lines = sorted(lines)
+            while len(lines) != 0:
+                new_eid = lines[0][0]
+                if new_eid != e_id:
+                    f.write("\n%s;\n" % new_eid)
+                    k_f.write("\n%s;\n" % new_eid)
+                    e_id = new_eid
+                else:
+                    f.write(";")
+                    k_f.write(";")
+                p = int(lines[0][4])
+                f.write("%s,%s,%s,%s" % (lines[0][1],lines[0][2],lines[0][3],p))
+                k_f.write("%s,%s,%s,%s" % (lines[0][1],lines[0][2],(property_to_base[p] + int(lines[0][3])),p))
+                property_to_line[p] = property_to_file[p].readline().rstrip()
+                lines.pop(0)
+                if not property_to_line[p]:
+                    property_to_file[p].close()
+                    os.remove(property_to_file[p].name)
+                else:
+                    line = property_to_line[p].split(",")
+                    line = (int(line[-1]),int(line[0]),int((line[1])),int(line[2]),p)
+                    bisect.insort(lines,line)
+
+
+def write_auxiliary_output(vmap_path,states_path,properties_list,cutpoints, method_name):
+    id_to_name = {}
+    try:
+        with open(vmap_path) as in_file:
+            input = csv.reader(in_file)
+            for line in input:
+                id = line[0]
+                name = line[1]
+                if name == "TemporalPropertyName":
+                    continue
+                else:
+                    id_to_name[int(id)] = name
+    except FileNotFoundError:
+        for property_id in properties_list:
+            id_to_name[int(property_id)] = "Property_%s" % (property_id)
+
+    with open(states_path, 'w', newline='') as out_file:
+        out = csv.writer(out_file)
+        out.writerow(
+            ["StateID", "IntervalClusterID", "TemporalPropertyID", "TemporalPropertyName", "MethodName", "Error1",
+             "Entropy", "BinID", "BinLabel", "BinFrom", "BinTo", "IntervalClusterLabel", "IntervalClusterCentroid",
+             "IntervalClusterVariance", "IntervalClusterSize"])
+        state_id = 0
+        for key in sorted(cutpoints.keys()):
+            bin_id = 0
+            from_val = -(10 ** 5)
+            for cutpoint in cutpoints[key]:
+                out.writerow(
+                    [str(state_id), "1", str(key), id_to_name[key], method_name, "0", "0", bin_id, "Level%s" % bin_id,
+                     from_val, cutpoint, "NoClustering", "1", "0", "0"])
+                from_val = cutpoint
+                state_id += 1
+                bin_id += 1
+            out.writerow(
+                [str(state_id), "1", str(key), id_to_name[key], method_name, "0", "0", bin_id, "Level%s" % bin_id,
+                 from_val, (10 ** 5), "NoClustering", "1", "0", "0"])
+            state_id += 1
+            bin_id += 1
 
 
 def convert_cutpoints_to_output(bins_cutpoints, property_to_entities, class_to_entities: Dict[int, Set[Entity]], property_to_timestamps,
@@ -86,8 +215,8 @@ def convert_cutpoints_to_output(bins_cutpoints, property_to_entities, class_to_e
                 for _property in _entity.properties:
 
                     for _time_stamp in _entity.properties[_property]:
-                        _start_time = _time_stamp.time.start_point
-                        _end_time = _time_stamp.time.end_point
+                        _start_time = _time_stamp.start_point
+                        _end_time = _time_stamp.end_point
                         op_id = _time_stamp.value
                         p_id = _property
                         entity_element = [_start_time, _end_time, op_id, p_id]

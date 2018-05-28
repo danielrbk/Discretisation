@@ -52,6 +52,9 @@ def class_information_entropy(subset_1, subset_2, classes_list):
 
 
 class Binary(Discretization):
+    def get_map_used(self):
+        return "property_to_entities"
+
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
                        property_to_timestamps: Dict[int, List[TimeStamp]]):
         cutpoints = self.parallel_cutpoint_set(property_to_entities, class_to_entities, property_to_timestamps)
@@ -60,7 +63,8 @@ class Binary(Discretization):
     def set_bin_ranges_for_property(self, property_to_entities: Dict[int, Set[Entity]],
                                     class_to_entities: Dict[int, Set[Entity]],
                                     property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int):
-
+        if not property_to_entities:
+            self.load_property_to_entity(property_to_entities, property_id)
         matching_entities = property_to_entities[property_id]
         matching_classes = set()
         property_value_class_list = []
