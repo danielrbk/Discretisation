@@ -1,9 +1,10 @@
 import bisect
 import csv
 import os
-from math import floor
+from math import floor, log
 from typing import Dict, Set, List
 
+from Implementation.Constants import EXTREME_VAL
 from Implementation.TimeStamp import TimeStamp
 from Implementation.AbstractDiscretisation import Discretization
 from Implementation.ClassicMethods.EQW import EqualWidth
@@ -48,15 +49,17 @@ def write_partition(p2e: Dict[int, Set[Entity]], c2e: Dict[int, Set[Entity]], p2
 def merge_partitions(out_folder, vmap_path, method_name,properties_list, class_list, class_to_entity_count, bins_cutpoints, entity_count):
     folder_path = out_folder
     states_path = folder_path + "\\" + "states.csv"
+    finished_path = folder_path + "\\" + "finished.log"
     entities_path = folder_path + "\\" + "entities_class_"
     property_to_base = {}
+    class_to_sid_to_count = {}
     last_base = 0
+    property_to_state_to_count = {}
+    sid_to_count = {}
     cutpoints = bins_cutpoints
     for key in sorted(cutpoints.keys()):
         property_to_base[key] = last_base
         last_base += len(cutpoints[key]) + 1
-
-    write_auxiliary_output(vmap_path,states_path,properties_list,bins_cutpoints,method_name)
 
     if len(class_list) == 0:
         class_list.append("None")
@@ -83,8 +86,19 @@ def merge_partitions(out_folder, vmap_path, method_name,properties_list, class_l
                     f.write(";")
                     k_f.write(";")
                 p = int(lines[0][4])
+                if p in property_to_state_to_count:
+                    sid_to_count = property_to_state_to_count[p]
+                else:
+                    property_to_state_to_count[p] = {}
+                    sid_to_count = property_to_state_to_count[p]
+                bin = int(lines[0][3])
+                state_id = property_to_base[p] + bin
+                if bin in sid_to_count:
+                    sid_to_count[bin] += 1
+                else:
+                    sid_to_count[bin] = 1
                 f.write("%s,%s,%s,%s" % (lines[0][1],lines[0][2],lines[0][3],p))
-                k_f.write("%s,%s,%s,%s" % (lines[0][1],lines[0][2],(property_to_base[p] + int(lines[0][3])),p))
+                k_f.write("%s,%s,%s,%s" % (lines[0][1],lines[0][2],state_id,p))
                 property_to_line[p] = property_to_file[p].readline().rstrip()
                 lines.pop(0)
                 if not property_to_line[p]:
@@ -95,9 +109,14 @@ def merge_partitions(out_folder, vmap_path, method_name,properties_list, class_l
                     line = (int(line[-1]),int(line[0]),int((line[1])),int(line[2]),p)
                     bisect.insort(lines,line)
 
+    write_auxiliary_output(vmap_path,states_path,properties_list,bins_cutpoints,method_name, property_to_state_to_count)
+    with open(finished_path, 'w') as f:
+        f.write("done")
 
-def write_auxiliary_output(vmap_path,states_path,properties_list,cutpoints, method_name):
+
+def write_auxiliary_output(vmap_path,states_path,properties_list,cutpoints, method_name, property_to_state_to_count):
     id_to_name = {}
+    property_to_state_to_entropy = calculate_property_entropy(property_to_state_to_count)
     try:
         with open(vmap_path) as in_file:
             input = csv.reader(in_file)
@@ -121,20 +140,34 @@ def write_auxiliary_output(vmap_path,states_path,properties_list,cutpoints, meth
         state_id = 0
         for key in sorted(cutpoints.keys()):
             bin_id = 0
-            from_val = -(10 ** 5)
+            from_val = -EXTREME_VAL
             for cutpoint in cutpoints[key]:
                 out.writerow(
-                    [str(state_id), "1", str(key), id_to_name[key], method_name, "0", "0", bin_id, "Level%s" % bin_id,
+                    [str(state_id), "1", str(key), id_to_name[key], method_name, "0", property_to_state_to_entropy[key][bin_id], bin_id, "Level%s" % bin_id,
                      from_val, cutpoint, "NoClustering", "1", "0", "0"])
                 from_val = cutpoint
                 state_id += 1
                 bin_id += 1
             out.writerow(
-                [str(state_id), "1", str(key), id_to_name[key], method_name, "0", "0", bin_id, "Level%s" % bin_id,
-                 from_val, (10 ** 5), "NoClustering", "1", "0", "0"])
+                [str(state_id), "1", str(key), id_to_name[key], method_name, "0",  property_to_state_to_entropy[key][bin_id], bin_id, "Level%s" % bin_id,
+                 from_val, EXTREME_VAL, "NoClustering", "1", "0", "0"])
             state_id += 1
             bin_id += 1
 
+
+def calculate_property_entropy(property_to_state_to_count):
+    property_to_state_to_entropy = {}
+    for property_id in property_to_state_to_count:
+        property_to_state_to_entropy[property_id] = {}
+        state_to_count = property_to_state_to_count[property_id]
+        max_val = max(state_to_count.values())
+        for state in state_to_count:
+            property_to_state_to_entropy[property_id][state] = get_entropy(state_to_count[state]/max_val)
+    return property_to_state_to_entropy
+
+
+def get_entropy(p):
+    return -p*log(p)
 
 def convert_cutpoints_to_output(bins_cutpoints, property_to_entities, class_to_entities: Dict[int, Set[Entity]], property_to_timestamps,
                                 folder_path, dataset_name, method_name, vmap_path):

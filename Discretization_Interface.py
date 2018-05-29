@@ -139,7 +139,12 @@ def first_method(running_configurations, root_folder, file_id):
     for running_configuration in running_configurations:
         method_name = running_configuration[0]
         args = running_configuration[1]
-        discretization_methods.append((method_name, args, methods_names_to_functions[method_name](*args.split("_"))))
+        if method_name == "EXPERT":
+            md5 = args.split("_")[0]
+            max_gap = args.split("_")[1]
+            discretization_methods.append((method_name,args,Expert("%s\\%s\\%s\\%s" % (root_folder,file_id,method_name,md5),max_gap)))
+        else:
+            discretization_methods.append((method_name, args, methods_names_to_functions[method_name](*args.split("_"))))
     discretization_methods = sorted(discretization_methods, key=lambda x: x[2].get_map_used())
     property_count = 0
     total_properties = len(property_ids)
