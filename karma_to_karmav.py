@@ -3,6 +3,8 @@ def karma_to_karmav_format(path, output):
     with open(path) as karma:
         for line in karma:
             split_line = line.split( )
+            if len(split_line) < 1:
+                continue
             relation_string = tuple([int(x) for x in split_line[1].split('-')[:-1]])
             count = int(split_line[0])
             if count == 1:

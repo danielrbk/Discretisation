@@ -208,12 +208,12 @@ class __SAX__(object):
         return DataFrame(ans)
 
     def perform_discretization_framework(self, property_to_timestamps):
-        ans = {}
         for property_id in property_to_timestamps:
             values = [x.value for x in property_to_timestamps[property_id]]
             symbols_data = self.to_symbols(values)
-            for i in range(len(property_to_timestamps[property_id])):
-                property_to_timestamps[property_id][i].value = values[i]
+            for i in range(len(symbols_data)):
+                for j in range(self._points_amount):
+                    property_to_timestamps[property_id][self._points_amount*i+j].value = symbols_data[i]
         return self.__build_limits(self._alphabet_size)
 
     def discretize(self, p2e, c2e, p2t):

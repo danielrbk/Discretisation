@@ -140,16 +140,27 @@ def write_auxiliary_output(vmap_path,states_path,properties_list,cutpoints, meth
         state_id = 0
         for key in sorted(cutpoints.keys()):
             bin_id = 0
+            state_to_entropy = property_to_state_to_entropy[key]
             from_val = -EXTREME_VAL
             for cutpoint in cutpoints[key]:
+                entropy = ""
+                if bin_id in state_to_entropy:
+                    entropy = state_to_entropy[bin_id]
+                else:
+                    entropy = "undefined"
                 out.writerow(
-                    [str(state_id), "1", str(key), id_to_name[key], method_name, "0", property_to_state_to_entropy[key][bin_id], bin_id, "Level%s" % bin_id,
+                    [str(state_id), "1", str(key), id_to_name[key], method_name, "0", entropy, bin_id, "Level%s" % bin_id,
                      from_val, cutpoint, "NoClustering", "1", "0", "0"])
                 from_val = cutpoint
                 state_id += 1
                 bin_id += 1
+            entropy = ""
+            if bin_id in state_to_entropy:
+                entropy = state_to_entropy[bin_id]
+            else:
+                entropy = "undefined"
             out.writerow(
-                [str(state_id), "1", str(key), id_to_name[key], method_name, "0",  property_to_state_to_entropy[key][bin_id], bin_id, "Level%s" % bin_id,
+                [str(state_id), "1", str(key), id_to_name[key], method_name, "0",  entropy, bin_id, "Level%s" % bin_id,
                  from_val, EXTREME_VAL, "NoClustering", "1", "0", "0"])
             state_id += 1
             bin_id += 1

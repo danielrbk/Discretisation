@@ -6,7 +6,7 @@ NUM_COMMA = 2
 
 
 def run_KL(input_path,output_folder,epsilon,max_gap,vertical_support):
-    output_path = output_folder + "\\epsilon%s_maxgap%s_vs%s.csv" % (epsilon, max_gap, vertical_support)
+    output_path = output_folder
     suportVec = float(vertical_support)
     num_relations = 7
     num_symbols = count_symbols(input_path,output_path)
