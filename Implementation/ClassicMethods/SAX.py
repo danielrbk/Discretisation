@@ -28,7 +28,9 @@ class SAX(Discretization):
 
     def __init__(self, bin_count, max_gap, window_size):
         super(SAX, self).__init__(max_gap)
-        self.SAX_OBJECT = __SAX__(int(bin_count),int(window_size))
+        self.bin_count = int(bin_count)
+        self.window_size = int(window_size)
+        self.SAX_OBJECT = __SAX__(int(window_size),int(bin_count),alphabet=[str(i) for i in range(int(bin_count))])
 
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
                        property_to_timestamps: Dict[int, List[TimeStamp]]) -> Dict[int, List[float]]:
@@ -57,12 +59,12 @@ class SAX(Discretization):
                             class_to_entities: Dict[int, Set[Entity]],
                             property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int) -> Tuple[
         Dict[int, Set['Entity']], Dict[int, Set['Entity']], Dict[int, List[TimeStamp]]]:
+        new_p2t = self.get_copy_of_property_to_timestamps(property_to_timestamps)
         self.bins_cutpoints[property_id] = self.set_bin_ranges_for_property(property_to_entities, class_to_entities,
-                                                                            property_to_timestamps, property_id)
-        property_to_timestamps = self.get_copy_of_property_to_timestamps(property_to_timestamps)
+                                                                            new_p2t, property_id)
         self.set_bin_ranges_from_cutpoints_for_property(property_id)
-        self.abstract_property_in_property_to_timestamps(property_to_timestamps,property_id)
-        return property_to_entities,class_to_entities,property_to_timestamps
+        self.abstract_property_in_property_to_timestamps(new_p2t,property_id)
+        return property_to_entities,class_to_entities,new_p2t
 
 
 
@@ -210,10 +212,15 @@ class __SAX__(object):
     def perform_discretization_framework(self, property_to_timestamps):
         for property_id in property_to_timestamps:
             values = [x.value for x in property_to_timestamps[property_id]]
-            symbols_data = self.to_symbols(values)
+            symbols_data = self.to_symbols(values)[0]
             for i in range(len(symbols_data)):
                 for j in range(self._points_amount):
-                    property_to_timestamps[property_id][self._points_amount*i+j].value = symbols_data[i]
+                    symbol = int(symbols_data[i])
+                    index = self._points_amount*i+j
+                    if index < len(property_to_timestamps[property_id]):
+                        property_to_timestamps[property_id][index].value = symbol
+                    else:
+                        break
         return self.__build_limits(self._alphabet_size)
 
     def discretize(self, p2e, c2e, p2t):
