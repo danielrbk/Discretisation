@@ -203,7 +203,7 @@ def second_method(running_configurations, root_folder, file_id):
         output_path_folder = "%s\\%s\\%s\\%s\\%s\\%s" % (root_folder, file_id, method_name, args, pattern_discovery, pattern_discovery_args)
         for file in listdir(input_path_folder):
             file_name = file
-            if "karmalego" in file_name:
+            if "discretized" in file_name:
                 print("Pattern Discovery on %s" % file_name)
                 input_path = input_path_folder + "\\" + file
                 try:
@@ -229,8 +229,6 @@ def second_method(running_configurations, root_folder, file_id):
                         print(exception_text)
                         print("***********************************************\n")
                         f.write(exception_text)
-
-
 
 def use_karma_lego(input_path,output_path_folder,output_file,args):
     class_name = output_file.split("_")[-1].split(".")[0]

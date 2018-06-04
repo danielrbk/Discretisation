@@ -21,6 +21,7 @@ entities: Dict[int,Entity] = {}
 def extract_from_file(file_path, file_extension, class_separator, add_class_information_to_timestamps) -> bool:
     with open(file_path) as f:
         try:
+            line_number = 0
             l = f.readline()
             for line in f:
                 dr = DataRow.get_data_from_row(line)
@@ -31,6 +32,9 @@ def extract_from_file(file_path, file_extension, class_separator, add_class_info
                     e = Entity(eid, 0, class_separator)
                     entities[eid] = e
                 e.add_time_stamp(dr.get_temporal_property_id(),dr.get_time_stamp())
+                line_number += 1
+                if line_number % 100000 == 0:
+                    print("%s/%s" %(line_number//100000,97000000//100000))
             p2e, c2e, p2t = Entity.get_maps()
             # holy loops batman
             if add_class_information_to_timestamps:
