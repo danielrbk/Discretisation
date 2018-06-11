@@ -22,7 +22,7 @@ def run_KL(input_path,output_folder,epsilon,max_gap,vertical_support):
 def count_symbols(input_path,output_path):
     iter = 0
     entities_count = 0
-    symbol_occurence = {}
+    symbol_vs = {}
     with open(input_path) as in_file, open(output_path, 'w') as out_file:
         for line in in_file:
             if iter == 0:
@@ -34,17 +34,20 @@ def count_symbols(input_path,output_path):
             else:
                 split_line = line.split(';')
                 split_line = [int(x.split(',')[NUM_COMMA]) for x in split_line]
+                symbol_occurence = set()
                 for symbol in split_line:
-                    if symbol in symbol_occurence:
-                        symbol_occurence[symbol] += 1
-                    else:
-                        symbol_occurence[symbol] = 1
+                    if symbol not in symbol_occurence:
+                        symbol_occurence.add(symbol)
+                for symbol in symbol_occurence:
+                    if symbol not in symbol_vs:
+                        symbol_vs[symbol] = 0
+                    symbol_vs[symbol] += 1
             iter += 1
 
-        for symbol in symbol_occurence:
-            out_file.write("1 %s- \0. 0 %s\n" % (symbol,entities_count))
+        for symbol in symbol_vs:
+            out_file.write("1 %s- X. 0 %s\n" % (symbol,symbol_vs[symbol]))
 
-    return len(symbol_occurence.keys())
+    return len(symbol_vs.keys())
 
 
 if __name__ == "__main__":
