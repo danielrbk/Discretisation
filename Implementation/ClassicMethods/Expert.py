@@ -27,7 +27,7 @@ class Expert(Discretization):
 
     def set_bin_ranges_for_property(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
                        property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int):
-        if not property_to_timestamps:
+        if not property_to_timestamps and not property_to_entities and not class_to_entities:
             self.load_property_to_timestamps(property_to_timestamps,property_id)
         return self.bins_cutpoints[property_id]
 

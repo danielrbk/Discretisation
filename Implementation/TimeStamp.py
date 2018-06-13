@@ -16,9 +16,9 @@ class TimeStamp(object):
     def __str__(self):
         timestr = [self.start_point, self.end_point].__str__() if self.start_point!=self.end_point else self.start_point.__str__()
         if self.ts_class is not None:
-            return "<%st , %s, %sc>" % (timestr, self.value, self.ts_class)
+            return "<%st , %s, %se, %sc>" % (timestr, self.value, self.entity_id,self.ts_class)
         else:
-            return "<%st , %s>" % (timestr, self.value)
+            return "<%st , %s, %se>" % (timestr, self.value, self.entity_id)
 
     def __lt__(self, other):
         return self.start_point < other.start_point or \

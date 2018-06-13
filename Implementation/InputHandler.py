@@ -102,6 +102,7 @@ def receive_file(file_path, class_separator, class_information):
     if not extract_from_file(file_path, file_extension, class_separator, class_information):
         raise Exception("File format incorrect")
 
+
 def get_maps_from_file(path, entities_path, class_seperator, class_information=False):
     return partition_file_to_properties(path, entities_path)
     #receive_file(path, class_seperator, class_information)

@@ -45,6 +45,38 @@ def write_partition(p2e: Dict[int, Set[Entity]], c2e: Dict[int, Set[Entity]], p2
                     for ts in e.properties[property_id]:
                         f.write("%s,%s,%s,%s\n" % (ts.start_point, ts.end_point, floor(ts.value), e.entity_id))
 
+def write_partition_float(p2e: Dict[int, Set[Entity]], c2e: Dict[int, Set[Entity]], p2t: Dict[int, List[TimeStamp]],out_folder, property_id):
+    open_file = None
+    start = True
+    if p2t:
+        sorted_by_entity_start: List[TimeStamp] = sorted(p2t[property_id],key=lambda x: (x.ts_class,x.entity_id, x.start_point, x.end_point))
+        e_id = c_id = float('-inf')
+        for ts in sorted_by_entity_start:
+            if ts.ts_class != c_id:
+                start = True
+                if open_file is not None:
+                    open_file.close()
+                c_id = ts.ts_class
+                open_file = open(out_folder + "\\property%s_class%s.temp" % (property_id,c_id), 'w')
+            open_file.write("%s,%s,%s,%s\n" % (ts.start_point, ts.end_point, float(ts.value), ts.entity_id))
+    elif p2e:
+        entities = sorted(p2e[property_id],key=lambda x:(x.entity_class,x.entity_id))
+        c_id = float('-inf')
+        for e in entities:
+            if e.entity_class != c_id:
+                start = True
+                if open_file is not None:
+                    open_file.close()
+                c_id = e.entity_class
+                open_file = open(out_folder + "\\property%s_class%s.temp" % (property_id,c_id), 'w')
+            for ts in e.properties[property_id]:
+                open_file.write("%s,%s,%s,%s\n" % (ts.start_point, ts.end_point, float(ts.value), e.entity_id))
+    else:
+        for c_id in c2e:
+            with open(out_folder + "\\property%s_class%s.temp" % (property_id,c_id), 'w') as f:
+                for e in sorted(c2e[c_id], key=lambda x:x.entity_id):
+                    for ts in e.properties[property_id]:
+                        f.write("%s,%s,%s,%s\n" % (ts.start_point, ts.end_point, float(ts.value), e.entity_id))
 
 def merge_partitions(out_folder, vmap_path, method_name,properties_list, class_list, class_to_entity_count, bins_cutpoints, entity_count):
     folder_path = out_folder

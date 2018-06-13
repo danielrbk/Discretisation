@@ -4,7 +4,7 @@ from numpy import unicode
 
 PROJECT_PATH = path.abspath(path.join(__file__ ,"../.."))
 DATASETS_PATH = PROJECT_PATH+"\\"+"datasets"
-
+STRESS_VALUE_COUNT = 10**7
 from collections import OrderedDict, Mapping, Container
 from pprint import pprint
 

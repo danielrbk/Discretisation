@@ -70,7 +70,7 @@ class Entity(object):
         return self.entity_id.__hash__()
 
     def __str__(self):
-        ss = "Property " + self.entity_id.__str__() + ":\n"
+        ss = "Entity " + self.entity_id.__str__() + ":\n"
         strs = []
         for key in self.properties.keys():
             s = "[%s: [" % key

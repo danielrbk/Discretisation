@@ -28,7 +28,9 @@ class SAX(Discretization):
 
     def __init__(self, bin_count, max_gap, window_size):
         super(SAX, self).__init__(max_gap)
-        self.SAX_OBJECT = __SAX__(int(bin_count),int(window_size))
+        self.bin_count = int(bin_count)
+        self.window_size = int(window_size)
+        self.SAX_OBJECT = __SAX__(int(window_size),int(bin_count),alphabet=[str(i) for i in range(int(bin_count))])
 
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
                        property_to_timestamps: Dict[int, List[TimeStamp]]) -> Dict[int, List[float]]:
@@ -57,12 +59,12 @@ class SAX(Discretization):
                             class_to_entities: Dict[int, Set[Entity]],
                             property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int) -> Tuple[
         Dict[int, Set['Entity']], Dict[int, Set['Entity']], Dict[int, List[TimeStamp]]]:
+        new_p2t = self.get_copy_of_property_to_timestamps(property_to_timestamps)
         self.bins_cutpoints[property_id] = self.set_bin_ranges_for_property(property_to_entities, class_to_entities,
-                                                                            property_to_timestamps, property_id)
-        property_to_timestamps = self.get_copy_of_property_to_timestamps(property_to_timestamps)
+                                                                            new_p2t, property_id)
         self.set_bin_ranges_from_cutpoints_for_property(property_id)
-        self.abstract_property_in_property_to_timestamps(property_to_timestamps,property_id)
-        return property_to_entities,class_to_entities,property_to_timestamps
+        self.abstract_property_in_property_to_timestamps(new_p2t,property_id)
+        return property_to_entities,class_to_entities,new_p2t
 
 
 
@@ -112,10 +114,11 @@ class __SAX__(object):
             alphabet.append(alphabet[index - 1] + 1)
         return [chr(element) for element in alphabet]
 
-    def __build_limits(self, size):
+    @staticmethod
+    def build_limits(size):
         return [norm.ppf(part / size) for part in range(1, size)]
 
-    def __normalize(self, values):
+    def normalize(self, values):
         """
         Function will normalize an array (give it a mean of 0, and a
         standard deviation of 1) unless it's standard deviation is below
@@ -140,6 +143,39 @@ class __SAX__(object):
         values_length = len(values)
 
         frame_size = int(np.math.ceil(values_length / float(self._word_size)))
+
+        frame_start = 0
+
+        approximation = []
+
+        indices_ranges = []
+
+        loop_limit = values_length - frame_size
+
+        while frame_start <= loop_limit:
+            to = int(frame_start + frame_size)
+            indices_ranges.append((frame_start, to))
+            approximation.append(np.mean(np.array(values[frame_start: to])))
+            frame_start += frame_size
+
+        # handle the remainder if n % w != 0
+        if frame_start < values_length:
+            indices_ranges.append((frame_start, values_length))
+            approximation.append(np.mean(np.array(values[frame_start: values_length])))
+
+        return np.array(approximation), indices_ranges
+
+    def to_paa(self, values):
+        """
+        Performs Piecewise Aggregate Approximation on a given values, reducing
+        the dimension of the values length n to w approximations.
+        each value from the approximations is the mean of frame size values.
+        returns the reduced dimension data set, as well as the indices corresponding to the original
+        data for each reduced dimension.
+        """
+        values_length = len(values)
+
+        frame_size = self._points_amount
 
         frame_start = 0
 
@@ -193,7 +229,7 @@ class __SAX__(object):
         if length % self._points_amount != 0:
             self._word_size +=1
 
-        (values_as_paa, indices) = self.__to_paa(self.__normalize(values))
+        (values_as_paa, indices) = self.__to_paa(self.normalize(values))
         return self.__convert_to_symbols(values_as_paa, column), indices
 
     def perform_discritization(self, data_frame, with_columns=False):
@@ -210,11 +246,16 @@ class __SAX__(object):
     def perform_discretization_framework(self, property_to_timestamps):
         for property_id in property_to_timestamps:
             values = [x.value for x in property_to_timestamps[property_id]]
-            symbols_data = self.to_symbols(values)
+            symbols_data = self.to_symbols(values)[0]
             for i in range(len(symbols_data)):
                 for j in range(self._points_amount):
-                    property_to_timestamps[property_id][self._points_amount*i+j].value = symbols_data[i]
-        return self.__build_limits(self._alphabet_size)
+                    symbol = int(symbols_data[i])
+                    index = self._points_amount*i+j
+                    if index < len(property_to_timestamps[property_id]):
+                        property_to_timestamps[property_id][index].value = symbol
+                    else:
+                        break
+        return self.build_limits(self._alphabet_size)
 
     def discretize(self, p2e, c2e, p2t):
         m1,m2,m3 = Discretization.get_copy_of_maps(p2e,c2e,p2t)
