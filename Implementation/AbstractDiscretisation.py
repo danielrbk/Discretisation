@@ -163,28 +163,30 @@ class Discretization(ABC):
                             class_to_entities: Dict[int, Set[Entity]],
                             property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int) -> Tuple[
         Dict[int, Set['Entity']], Dict[int, Set['Entity']], Dict[int, List[TimeStamp]]]:
-        debug_print("Getting cutpoints")
+        print("Getting cutpoints")
         self.bins_cutpoints[property_id] = self.set_bin_ranges_for_property(property_to_entities, class_to_entities,
                                                                             property_to_timestamps, property_id)
-        debug_print("Got cutpoints, getting copy of map")
-        if property_to_timestamps:
-            property_to_timestamps = self.get_copy_of_property_to_timestamps(property_to_timestamps)
-        elif property_to_entities:
-            property_to_entities = self.get_copy_of_property_to_entities(property_to_entities)
-        else:
-            class_to_entities = self.get_copy_of_class_to_entities(class_to_entities)
-        debug_print("Abstracting copy")
-        self.set_bin_ranges_from_cutpoints_for_property(property_id)
-        self.abstract_property(property_to_entities,class_to_entities,property_to_timestamps,property_id)
-        return property_to_entities,class_to_entities,property_to_timestamps
+        print("Got cutpoints, getting copy of map")
+        if len(self.bins_cutpoints[property_id]) != 0:
+            if property_to_timestamps:
+                property_to_timestamps = self.get_copy_of_property_to_timestamps(property_to_timestamps)
+            elif property_to_entities:
+                property_to_entities = self.get_copy_of_property_to_entities(property_to_entities)
+            else:
+                class_to_entities = self.get_copy_of_class_to_entities(class_to_entities)
+            print("Abstracting copy")
+            self.set_bin_ranges_from_cutpoints_for_property(property_id)
+            self.abstract_property(property_to_entities,class_to_entities,property_to_timestamps,property_id)
+            return property_to_entities,class_to_entities,property_to_timestamps
+        return {},{},{}
 
     def discretize_property_without_abstracting(self, property_to_entities: Dict[int, Set[Entity]],
                             class_to_entities: Dict[int, Set[Entity]],
                             property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int):
-        debug_print("Getting cutpoints")
+        print("Getting cutpoints")
         self.bins_cutpoints[property_id] = self.set_bin_ranges_for_property(property_to_entities, class_to_entities,
                                                                             property_to_timestamps, property_id)
-        debug_print("Got cutpoints, getting copy of map")
+        print("Got cutpoints, getting copy of map")
 
 
     def abstract(self,  property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
@@ -442,7 +444,7 @@ class Discretization(ABC):
                 else:
                     entity_count += 1
                     if entity_count % 10000 == 0:
-                        debug_print("Total entities read: %s" % entity_count)
+                        print("Total entities read: %s" % entity_count)
                         #debug_print("Memory used by map: %s" % (deep_getsizeof(entity_to_timestamps,set()) / (1024*1024)))
                     entity_to_timestamps[eid] = [dr.get_time_stamp()]
                 del dr

@@ -29,6 +29,8 @@ class Expert(Discretization):
                        property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int):
         if not property_to_timestamps and not property_to_entities and not class_to_entities:
             self.load_property_to_timestamps(property_to_timestamps,property_id)
+        if property_id not in self.bins_cutpoints:
+            return []
         return self.bins_cutpoints[property_id]
 
     def write_auxiliary_information(self, property_to_entities: Dict[int, Set[Entity]],

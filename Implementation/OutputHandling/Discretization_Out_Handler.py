@@ -4,6 +4,8 @@ import os
 from math import floor, log
 from typing import Dict, Set, List
 
+from os.path import exists
+
 from Implementation.Constants import EXTREME_VAL
 from Implementation.TimeStamp import TimeStamp
 from Implementation.AbstractDiscretisation import Discretization
@@ -38,7 +40,7 @@ def write_partition(p2e: Dict[int, Set[Entity]], c2e: Dict[int, Set[Entity]], p2
                 open_file = open(out_folder + "\\property%s_class%s.temp" % (property_id,c_id), 'w')
             for ts in e.properties[property_id]:
                 open_file.write("%s,%s,%s,%s\n" % (ts.start_point, ts.end_point, floor(ts.value), e.entity_id))
-    else:
+    elif c2e:
         for c_id in c2e:
             with open(out_folder + "\\property%s_class%s.temp" % (property_id,c_id), 'w') as f:
                 for e in sorted(c2e[c_id], key=lambda x:x.entity_id):
@@ -78,7 +80,7 @@ def write_partition_float(p2e: Dict[int, Set[Entity]], c2e: Dict[int, Set[Entity
                     for ts in e.properties[property_id]:
                         f.write("%s,%s,%s,%s\n" % (ts.start_point, ts.end_point, float(ts.value), e.entity_id))
 
-def merge_partitions(out_folder, vmap_path, method_name,properties_list, class_list, class_to_entity_count, bins_cutpoints, entity_count):
+def merge_partitions(out_folder, vmap_path, method_name,total_properties_list, class_list, class_to_entity_count, bins_cutpoints, entity_count):
     folder_path = out_folder
     states_path = folder_path + "\\" + "states.csv"
     finished_path = folder_path + "\\" + "finished.log"
@@ -98,8 +100,12 @@ def merge_partitions(out_folder, vmap_path, method_name,properties_list, class_l
         class_to_entity_count["None"] = entity_count
     for c in class_list:
         e_id = float('-inf')
+        properties_list = []
+        for p_id in total_properties_list:
+            if exists(out_folder + "\\property%s_class%s.temp" % (p_id,c)):
+                properties_list.append(p_id)
         with open(out_folder + "\\" + method_name + '_Class' + str(c) + '.txt', 'w') as f,\
-                open(out_folder + "\\karmalegov_Class" + str(c) + ".csv", 'w') as k_f:
+                open(out_folder + "\\discretized_Class" + str(c) + ".csv", 'w') as k_f:
             f.write('startToncepts\n')
             k_f.write('startToncepts\n')
             f.write('numberOfEntities,' + str(class_to_entity_count[c]))
@@ -171,6 +177,8 @@ def write_auxiliary_output(vmap_path,states_path,properties_list,cutpoints, meth
              "IntervalClusterVariance", "IntervalClusterSize"])
         state_id = 0
         for key in sorted(cutpoints.keys()):
+            if len(cutpoints[key]) == 0:
+                continue
             bin_id = 0
             state_to_entropy = property_to_state_to_entropy[key]
             from_val = -EXTREME_VAL
