@@ -15,6 +15,7 @@ from Implementation.OutputHandling.Discretization_Out_Handler import convert_cut
     merge_partitions
 from Implementation.TD4C.TD4C import TD4C
 #from RunKL import run_KL
+from KarmaLego.Utils.FileUtil import kfold_tirps
 from RunKL import run_KL
 from karma_to_karmav import karma_to_karmav_format
 
@@ -199,13 +200,19 @@ def second_method(running_configurations, root_folder, file_id):
         args = running_configuration[1]
         pattern_discovery = running_configuration[2]
         pattern_discovery_args = running_configuration[3]
+        runKFOLD = False
+        if len(running_configurations)>4 and running_configurations[4].upper() == "KFOLD":
+            runKFOLD = True
+            k = running_configurations[5]
         input_path_folder = "%s\\%s\\%s\\%s" % (root_folder, file_id, method_name, args)
         output_path_folder = "%s\\%s\\%s\\%s\\%s\\%s" % (root_folder, file_id, method_name, args, pattern_discovery, pattern_discovery_args)
+        input_paths = []
         for file in listdir(input_path_folder):
             file_name = file
             if "discretized" in file_name:
                 print("Pattern Discovery on %s" % file_name)
                 input_path = input_path_folder + "\\" + file
+                input_paths.append(input_path)
                 try:
                     if not exists(output_path_folder):
                         makedirs(output_path_folder)
@@ -225,10 +232,13 @@ def second_method(running_configurations, root_folder, file_id):
                         print(exception_text)
                         print("***********************************************\n")
                         f.write(exception_text)
+        if runKFOLD:
+            use_kfold(input_paths,output_path_folder + "\\KFOLD\\%s" % k,k,*args)
         with open(output_path_folder + "\\" + "finished.log", 'w') as f:
             f.write(
                 "----FINISHED!----\nDate: %s\nInput file: %s\nOutput path: %s\nMethod: %s\nArgs: %s\n" % (
                     datetime.datetime.now(), input_path_folder, output_path_folder, "KarmaLego", args))
+
 
 def use_karma_lego(input_path,output_path_folder,output_file,args):
     class_name = output_file.split("_")[-1].split(".")[0]
@@ -242,6 +252,13 @@ def use_karma_lego(input_path,output_path_folder,output_file,args):
         makedirs(folder_out)
     karma_to_karmav_format(output_name, folder_out + "\\input.karma")
     print("     Created KarmaLegoV format\n")
+
+
+def use_kfold(input_paths,output_path,k,epsilon,max_gap,vertical_support):
+    if not exists(output_path):
+        makedirs(output_path)
+    kfold_tirps(input_paths,output_path,int(k),int(epsilon),int(max_gap),float(vertical_support))
+
 
 if __name__ == '__main__':
     run_methods(sys.argv[1], sys.argv[2:])

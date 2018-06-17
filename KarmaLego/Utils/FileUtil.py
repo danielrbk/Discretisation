@@ -1,3 +1,5 @@
+from functools import reduce
+
 from sklearn.model_selection import KFold
 from KarmaLego.KarmaLego_Framework.RunKarmaLego import *
 from KarmaLego.TIRPsDetection_Framework.TIRPsDetection import *
@@ -32,7 +34,7 @@ def get_file_indexes(lines):
     return start_lines,indexes
 
 
-def get_folds_files(indexes,train_indices,test_indices,start_lines,lines, iteration,file_path):
+def get_folds_files(indexes,train_indices,test_indices,start_lines,lines, iteration, out_folder, class_label):
     """
     this method creates new files for discovery and detection of tirps (train and test) by the given indices
      for each file, the method returns the new files with suffix of train/test and number of iteration
@@ -45,9 +47,8 @@ def get_folds_files(indexes,train_indices,test_indices,start_lines,lines, iterat
     :param file_path: string, the original file path
     :return: train_file - the path of the train data,test_file - the path for the test data
     """
-    prefix=file_path.replace(".csv","")
-    train_file=prefix+"_train_"+str(iteration)+".csv"
-    test_file = prefix +"_test_"+ str(iteration)+".csv"
+    train_file=out_folder + "\\tirps_train_%s_%s.tirps" % (iteration,class_label)
+    test_file =out_folder + "\\tirps_test_%s_%s.tirps" % (iteration,class_label)
 
     train_indexes = [list(indexes[i]) for i in train_indices]
     test_indexes = [list(indexes[i]) for i in test_indices]
@@ -78,6 +79,75 @@ def demi_tirps(list_tirp):
     for tirp in list_tirp:
         demi_tirps.append(tirp.hollow_copy())
     return demi_tirps
+
+
+def kfold_tirps(file_paths, output_path, k, epsilon, max_gap, min_ver_support, num_of_relations=7, representation='HS', NUM_COMMA=2):
+    lines_classes = []
+    start_lines = []
+    indexes_classes = []
+    class_names = []
+    for fp in file_paths:
+        with open(fp) as f:
+            class_name = fp.split("\\")[-1].split("_")[-1].split(".")[0]
+            class_names.append(class_name)
+            lines_classes.append(f.readlines())
+            start_lines_0,indexes_class_0=get_file_indexes(lines_classes[-1])
+            start_lines.append(start_lines_0)
+            indexes_classes.append(indexes_class_0)
+    kf = KFold(n_splits=k)
+    class_folds = []
+    for indices in indexes_classes:
+        class_folds.append(list(kf.split(indices)))
+    tirp_detection_obj = TIRPsDetection()
+    tirp_feature_ext_obj = TIRPsFeatureExtraction()
+
+    for i in range(k):
+        tirps_classes = []
+        demi_tirps_classes = []
+        detected_tirps_in_train = []
+        matrix_classes_train = []
+        matrix_classes_test = []
+        train_files = []
+        test_files = []
+
+        for j in range(len(indexes_classes)):
+            train_file, test_file = get_folds_files(indexes=indexes_classes[j],
+                                                                    train_indices=class_folds[j][i][0],
+                                                                    test_indices=class_folds[j][i][1],
+                                                                    start_lines=start_lines[j],
+                                                                    lines=lines_classes[j], iteration=i,
+                                                    out_folder=output_path, class_label=class_names[j])
+            train_files.append(train_file)
+            test_files.append(test_file)
+            lego = runKarmaLego(time_intervals_path=train_file,min_ver_support=min_ver_support,num_relations=num_of_relations,max_gap=max_gap,label=0,num_comma=NUM_COMMA)
+            tirps_classes.append(lego.frequent_tirps)
+            demi_tirps_classes.append(demi_tirps(lego.frequent_tirps))
+        tirps_sum = reduce(lambda x,y: x+y,tirps_classes)
+        demi_tirps_sum = reduce(lambda x,y: x+y,demi_tirps_classes)
+        freq_tirps = drop_recurrences_of_tirps(tirps_sum,num_of_relations)
+        for j in range(len(indexes_classes)):
+            detected_tirps_in_train=tirp_detection_obj.Sequential_TIRPs_Detection_multiply_entities(frequent_tirps=freq_tirps,#############
+                                                                                               time_intervals_entities_path=train_files[j],
+                                                                                               max_gap=max_gap,
+                                                                                               epsilon=epsilon,num_comma=NUM_COMMA)
+            matrix_classes_train.append(tirp_feature_ext_obj.getMatrixForModeling(tirps=drop_recurrences_of_tirps(demi_tirps_sum+detected_tirps_in_train,num_of_relations),
+                                                  entities_list=list(tirp_detection_obj._entities_map_to_detect.keys()),
+                                                  representation=representation,num_of_relations=num_of_relations,label=j))
+            detected_tirps_in_test = tirp_detection_obj.Sequential_TIRPs_Detection_multiply_entities(
+                frequent_tirps=freq_tirps,
+                time_intervals_entities_path=test_files[j],
+                max_gap=max_gap,
+                epsilon=epsilon, num_comma=NUM_COMMA)
+            matrix_classes_test.append(tirp_feature_ext_obj.getMatrixForModeling(tirps=drop_recurrences_of_tirps(demi_tirps_sum + detected_tirps_in_test,num_of_relations),
+                                                  entities_list=list(tirp_detection_obj._entities_map_to_detect.keys()),
+                                                  representation=representation,num_of_relations=num_of_relations,label=j))
+
+        tirps_matrix_for_train = tirp_feature_ext_obj.concat_matrix_classes(matrix_classes_train)
+        tirps_matrix_for_train.to_csv(output_path + "\\train_" + str(i) + ".csv")
+        tirps_matrix_for_test = tirp_feature_ext_obj.concat_matrix_classes(matrix_classes_test)
+        tirps_matrix_for_test.to_csv(output_path + "\\test_"+ str(i) +".csv")
+
+
 
 def CV_example(file_path_class_0,file_path_class_1,prefix_matrix,k=3,num_of_relations=7,max_gap=1,representation='HS',min_ver_support=0.6):
     """
@@ -252,7 +322,10 @@ def CV_example(file_path_class_0,file_path_class_1,prefix_matrix,k=3,num_of_rela
         print("RandomForest Recall: %0.2f (+/- %0.2f)" % (np.mean(RandomForest_recall), np.std(RandomForest_recall) * 2))
 
 
-
+if __name__ == "__main__":
+    path = r"C:\Users\Daniel Rejabek\PycharmProjects\Discretisation\datasets\FAAgeGroup_F3\TD4C\3_Cosine_2\discretized_Class%s.csv"
+    paths = [path % 2, path % 3, path % 4]
+    kfold_tirps(paths,r"C:\Users\Daniel Rejabek\PycharmProjects\Discretisation\datasets\FAAgeGroup_F3\TD4C\3_Cosine_2\kfold",3,0,2,0.35)
 
 
 #CV_example('C:/Users/user/PycharmProjects/similarityKarmalEGO/data_sets/icu/SAX_OUT_TEST_Class0.txt','C:/Users/user/PycharmProjects/similarityKarmalEGO/data_sets/icu/SAX_OUT_TEST_Class1.txt',
