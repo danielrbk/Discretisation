@@ -17,8 +17,8 @@ class TD4C(Discretization):
     def get_map_used(self):
         return "property_to_timestamps"
 
-    def __init__(self, bin_count, distance_measure, max_gap, ACCURACY_MEASURE = 100):
-        super(TD4C, self).__init__(max_gap)
+    def __init__(self, bin_count, distance_measure, max_gap, window_size=1,ACCURACY_MEASURE = 100):
+        super(TD4C, self).__init__(max_gap,window_size)
         self.ACCURACY_MEASURE = int(ACCURACY_MEASURE)
         if isinstance(distance_measure, str):
             if distance_measure == "Cosine":

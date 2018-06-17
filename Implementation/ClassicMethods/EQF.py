@@ -63,8 +63,8 @@ class EqualFrequency(Discretization):
     def get_discretization_name(self):
         return "EQF_%s" % self.bin_count
 
-    def __init__(self, bin_count, max_gap):
-        super(EqualFrequency, self).__init__(max_gap)
+    def __init__(self, bin_count, max_gap, window_size=1):
+        super(EqualFrequency, self).__init__(max_gap, window_size)
         self.bin_count = int(bin_count)
 
     @staticmethod

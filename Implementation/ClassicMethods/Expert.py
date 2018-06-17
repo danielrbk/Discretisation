@@ -13,8 +13,8 @@ class Expert(Discretization):
     def get_map_used(self):
         return "property_to_timestamps"
 
-    def __init__(self, bins_cutpoints, max_gap):
-        super(Expert, self).__init__(max_gap)
+    def __init__(self, bins_cutpoints, max_gap, window_size=1):
+        super(Expert, self).__init__(max_gap, window_size)
         if isinstance(bins_cutpoints,str):
             self.md5 = bins_cutpoints.split("\\")[-1]
             bins_cutpoints = Expert.load_path_into_dictionary(bins_cutpoints + "\\states.csv")

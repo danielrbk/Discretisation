@@ -26,8 +26,8 @@ class SAX(Discretization):
     def get_map_used(self):
         return "property_to_timestamps"
 
-    def __init__(self, bin_count, max_gap, window_size):
-        super(SAX, self).__init__(max_gap)
+    def __init__(self, bin_count, max_gap, window_size=1):
+        super(SAX, self).__init__(max_gap, window_size)
         self.bin_count = int(bin_count)
         self.window_size = int(window_size)
         self.SAX_OBJECT = __SAX__(int(window_size),int(bin_count),alphabet=[str(i) for i in range(int(bin_count))])

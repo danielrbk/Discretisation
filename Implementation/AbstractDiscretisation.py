@@ -15,13 +15,14 @@ from Tests.Constants import deep_getsizeof
 class Discretization(ABC):
     bin_id = 0
 
-    def __init__(self, interval_max_gap):
+    def __init__(self, interval_max_gap, window_size):
         self.max_gap: int = int(interval_max_gap)
         self.property_to_ranges: Dict[int, List[BinInterval]] = {}  # List of bin cutpoints, using OOP
         self.bin_count: int = 0  # Number of bins
         self.bin_symbol: int = -1  # Discretization symbol
         self.bins_cutpoints: Dict[int, List[float]] = {}  # List of bin cutpoints
         self.property_folder = ""
+        self.window_size = window_size
 
     def transform(self, property_id: int, val: TimeStamp) -> None:
         """

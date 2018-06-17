@@ -39,8 +39,8 @@ class KMeans(Discretization):
         return "KMeans_%s" % self.bin_count
 
 
-    def __init__(self, bin_count, max_gap):
-        super(KMeans, self).__init__(max_gap)
+    def __init__(self, bin_count, max_gap, window_size=1):
+        super(KMeans, self).__init__(max_gap, window_size)
         self.bin_count = int(bin_count)
 
 

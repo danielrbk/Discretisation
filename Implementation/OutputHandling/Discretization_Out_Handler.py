@@ -161,7 +161,7 @@ def write_auxiliary_output(vmap_path,states_path,properties_list,cutpoints, meth
             for line in input:
                 id = line[0]
                 name = line[1]
-                if name == "TemporalPropertyName":
+                if name.lower() == "TemporalPropertyName".lower():
                     continue
                 else:
                     id_to_name[int(id)] = name

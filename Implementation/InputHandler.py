@@ -59,9 +59,10 @@ def partition_file_to_properties(file_path,entities_path):
     line_count = 0
     if DEBUG_MODE or not exists(partitions_path):
         print("No partitions found, creating partitions...")
-        with open(file_path) as f, open(entities_path, 'w', newline='') as e_file:
-            entity_csv = csv.writer(e_file)
-            entity_csv.writerow(["id","name"])
+        e_file = None
+        if not exists(entities_path):
+            e_file = open(entities_path, 'w', newline='')
+        with open(file_path) as f:
             entities = set()
             if not exists(partitions_path):
                 os.makedirs(partitions_path)
@@ -83,8 +84,12 @@ def partition_file_to_properties(file_path,entities_path):
                 if pid not in property_to_file:
                     property_to_file[pid] = open(partitions_path + "\\property%s.csv" % pid, 'w')
                 property_to_file[pid].write(line)
-            for e in entities:
-                entity_csv.writerow([str(e),"Entity%s" % e])
+            if e_file is not None:
+                entity_csv = csv.writer(e_file)
+                entity_csv.writerow(["id","name"])
+                for e in entities:
+                    entity_csv.writerow([str(e),"Entity%s" % e])
+                e_file.close()
         for pid in property_to_file:
             property_to_file[pid].close()
         with open(partitions_path + "\\properties.csv", 'w', newline='') as f, open(partitions_path + "\\class_to_entity_count.csv", 'w', newline='') as c:

@@ -18,8 +18,8 @@ class Persist(Discretization):
     def get_map_used(self):
         return "property_to_timestamps"
 
-    def __init__(self, bin_count, max_gap):
-        super(Persist, self).__init__(max_gap)
+    def __init__(self, bin_count, max_gap, window_size=1):
+        super(Persist, self).__init__(max_gap, window_size)
         self.bin_count = int(bin_count)
 
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
