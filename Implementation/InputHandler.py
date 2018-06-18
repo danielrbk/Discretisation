@@ -13,6 +13,7 @@ from typing import Dict, List ,Set
 from copy import deepcopy, copy
 
 from Implementation.TD4C.TD4C import TD4C
+from dateutil import parser
 
 supported_extensions = [".txt",".csv"]
 entities: Dict[int,Entity] = {}
@@ -50,6 +51,13 @@ def extract_from_file(file_path, file_extension, class_separator, add_class_info
             return False
     return True
 
+"""
+def format_timestamps_to_int(file_path,entities_path):
+    with open(file_path) as f, open(file_path + "t", 'w') as w:
+        max_time = 
+        for line in f:
+            time = line.rstrip().split(',')[2]
+"""
 
 def partition_file_to_properties(file_path,entities_path):
     folder = file_path.split("\\")[:-1]
@@ -71,6 +79,11 @@ def partition_file_to_properties(file_path,entities_path):
                 if line_count%1000000 == 0:
                     print("Wrote %s lines..." % line_count)
                 line_count += 1
+                if line_count == 1:
+                    time = line.rstrip().split(',')
+                    if not isinstance(time,int):
+                        format_timestamps_to_int(file_path, entities_path)
+                        return
                 dr = DataRow.get_data_from_row(line)
                 if dr.entity_id not in entities:
                     entities.add(dr.entity_id)

@@ -67,9 +67,6 @@ class SAX(Discretization):
         return property_to_entities,class_to_entities,new_p2t
 
 
-
-
-
 class __SAX__(object):
     """
     This class is for computing common things with the Symbolic

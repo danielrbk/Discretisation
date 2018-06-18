@@ -2,6 +2,7 @@ from Implementation.AbstractDiscretisation import Discretization
 from typing import Dict, List, Set
 
 from Implementation.BinInterval import BinInterval
+from Implementation.Constants import EPSILON, EXTREME_VAL
 from Implementation.Entity import Entity
 from Implementation.TimeStamp import TimeStamp
 
@@ -22,35 +23,9 @@ class EqualFrequency(Discretization):
             self.load_property_to_timestamps(property_to_timestamps, property_id)
         property_values = sorted([ts.value for ts in property_to_timestamps[property_id]])
         percentiles = [i/self.bin_count for i in range(1,self.bin_count)]
-        property_count = len(property_values)
-
-        def get_index(percent, property_count):
-            '''
-            Get indices of the property values which induce the cuts used in the discretisation
-            :param percent:
-            :param property_count:
-            :return:
-            '''
-            x = percent * property_count + 0.5  # 0.5 will be explained later
-            if x >= property_count:
-                x = property_count - 1
-            elif x < 1:
-                x = 1
-            return x
-
-        def get_cutpoint(index, property_values):
-            '''
-
-            :param index:
-            :param property_values:
-            :return:
-            '''
-            from math import floor
-            floored_index = floor(index)  # normalize index for arrays
-            return property_values[floored_index - 1] + (index - floored_index) * (property_values[floored_index] - property_values[floored_index-1])
-
-        indices = [get_index(percent, property_count) for percent in percentiles]
-        cutpoints = [get_cutpoint(i, property_values) for i in indices]
+        max_index = len(property_values) - 1
+        indices = [p*max_index for p in percentiles]
+        cutpoints = [EqualFrequency.get_cutpoint(i, property_values) for i in indices]
         return list(sorted((set(cutpoints))))
         #return cutpoints
 
@@ -76,8 +51,16 @@ class EqualFrequency(Discretization):
         d1,d2,d3 = eqf.discretize_property(property_to_entities,class_to_entities,property_to_timestamps,property_id)
         return d3,eqf.bins_cutpoints
 
-
-
+    @staticmethod
+    def get_cutpoint(index, property_values):
+        from math import floor
+        floored_index = floor(index)  # normalize index for arrays
+        if floored_index == index:
+            index += EPSILON
+        if index < 0:
+            return -EXTREME_VAL + (index - floored_index) * (property_values[floored_index + 1] + EXTREME_VAL)
+        return property_values[floored_index] + (index - floored_index) * (
+        property_values[floored_index + 1] - property_values[floored_index])
 
 
 

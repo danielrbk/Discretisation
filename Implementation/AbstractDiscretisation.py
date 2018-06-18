@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from functools import reduce
 from multiprocessing.pool import ThreadPool
 
+import numpy as np
+
 from Implementation.BinInterval import BinInterval
 from typing import Dict, List, Set, Tuple
 
@@ -164,31 +166,36 @@ class Discretization(ABC):
                             class_to_entities: Dict[int, Set[Entity]],
                             property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int) -> Tuple[
         Dict[int, Set['Entity']], Dict[int, Set['Entity']], Dict[int, List[TimeStamp]]]:
-        print("Getting cutpoints")
+        if not property_to_entities and not class_to_entities and not property_to_timestamps:
+            if self.get_map_used() == "property_to_entities":
+                self.load_property_to_entity(property_to_entities, property_id)
+            elif self.get_map_used() == "class_to_entities":
+                self.load_class_to_entity(class_to_entities, property_id)
+            elif self.get_map_used() == "property_to_timestamps":
+                self.load_property_to_timestamps(property_to_timestamps, property_id)
+
+        if property_to_timestamps:
+            property_to_timestamps = self.paa_p2t(property_to_timestamps)
+        elif property_to_entities:
+            property_to_entities = self.paa_p2e(property_to_entities)
+        else:
+            class_to_entities = self.paa_c2e(class_to_entities)
+
         self.bins_cutpoints[property_id] = self.set_bin_ranges_for_property(property_to_entities, class_to_entities,
                                                                             property_to_timestamps, property_id)
-        print("Got cutpoints, getting copy of map")
+
         if len(self.bins_cutpoints[property_id]) != 0:
-            if property_to_timestamps:
-                property_to_timestamps = self.get_copy_of_property_to_timestamps(property_to_timestamps)
-            elif property_to_entities:
-                property_to_entities = self.get_copy_of_property_to_entities(property_to_entities)
-            else:
-                class_to_entities = self.get_copy_of_class_to_entities(class_to_entities)
-            print("Abstracting copy")
             self.set_bin_ranges_from_cutpoints_for_property(property_id)
             self.abstract_property(property_to_entities,class_to_entities,property_to_timestamps,property_id)
             return property_to_entities,class_to_entities,property_to_timestamps
-        return {},{},{}
+
+        return {}, {}, {}
 
     def discretize_property_without_abstracting(self, property_to_entities: Dict[int, Set[Entity]],
                             class_to_entities: Dict[int, Set[Entity]],
                             property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int):
-        print("Getting cutpoints")
         self.bins_cutpoints[property_id] = self.set_bin_ranges_for_property(property_to_entities, class_to_entities,
                                                                             property_to_timestamps, property_id)
-        print("Got cutpoints, getting copy of map")
-
 
     def abstract(self,  property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
                    property_to_timestamps: Dict[int, List[TimeStamp]]):
@@ -231,6 +238,113 @@ class Discretization(ABC):
                     entity.properties[property_id] = new_timestamps
                     property_to_timestamps[property_id] += new_timestamps
                 property_to_timestamps[property_id] = sorted(property_to_timestamps[property_id], key=lambda ts: ts.start_point)
+
+    def paa_p2t(self, property_to_timestamps):
+        """
+        Performs Piecewise Aggregate Approximation on a given values, reducing
+        the dimension of the values length n to w approximations.
+        each value from the approximations is the mean of frame size values.
+        returns the reduced dimension data set, as well as the indices corresponding to the original
+        data for each reduced dimension.
+        """
+        new_property_to_timestamps = {}
+        for property_id in property_to_timestamps:
+            new_property_to_timestamps[property_id] = []
+            entities: Dict[int, List[TimeStamp]] = {}
+            for ts in property_to_timestamps[property_id]:
+                e = ts.entity_id
+                if e not in entities:
+                    entities[e] = [ts]
+                else:
+                    entities[e].append(ts)
+
+            for e in entities:
+                new_property_to_timestamps[property_id] += self.paa_timestamps(entities[e])
+
+            new_property_to_timestamps[property_id] = list(sorted(new_property_to_timestamps[property_id],key=lambda ts: ts.start_point))
+        return new_property_to_timestamps
+
+    def paa_p2e(self, property_to_entities: Dict[int,Set[Entity]]):
+        """
+        Performs Piecewise Aggregate Approximation on a given values, reducing
+        the dimension of the values length n to w approximations.
+        each value from the approximations is the mean of frame size values.
+        returns the reduced dimension data set, as well as the indices corresponding to the original
+        data for each reduced dimension.
+        """
+        new_property_to_entity = {}
+        entities = {}
+        for property_id in property_to_entities:
+            new_property_to_entity[property_id] = set()
+            for e in property_to_entities[property_id]:
+                if e.entity_id not in entities:
+                    new_e = Entity(e.entity_id,e.entity_class)
+                    for property_id in e.properties:
+                        new_e.properties[property_id] = self.paa_timestamps(e.properties[property_id])
+                    entities[e.entity_id] = new_e
+                else:
+                    new_e = entities[e.entity_id]
+                new_property_to_entity[property_id].add(new_e)
+
+        return new_property_to_entity
+
+    def paa_c2e(self, class_to_entities: Dict[int, Set[Entity]]):
+        """
+        Performs Piecewise Aggregate Approximation on a given values, reducing
+        the dimension of the values length n to w approximations.
+        each value from the approximations is the mean of frame size values.
+        returns the reduced dimension data set, as well as the indices corresponding to the original
+        data for each reduced dimension.
+        """
+
+        new_class_to_entity = {}
+        for c in class_to_entities:
+            new_class_to_entity[c] = set()
+            for e in class_to_entities[c]:
+                new_e = Entity(e.entity_id, e.entity_class)
+                for property_id in e.properties:
+                    new_e.properties[property_id] = self.paa_timestamps(e.properties[property_id])
+                new_class_to_entity[c].add(new_e)
+
+        return new_class_to_entity
+
+    def paa_timestamps(self,timestamps: List[TimeStamp]):
+        if self.window_size == 1:
+            return [TimeStamp(ts.value,ts.start_point,ts.end_point,ts.entity_id,ts.ts_class) for ts in timestamps]
+        values = [ts.value for ts in timestamps]
+
+        values_length = len(values)
+
+        frame_size = self.window_size
+
+        new_values = []
+
+        frame_start = 0
+
+        approximation = []
+
+        indices_ranges = []
+
+        loop_limit = values_length - frame_size
+
+        while frame_start <= loop_limit:
+            to = int(frame_start + frame_size)
+            indices_ranges.append((frame_start, to))
+            new_values.append(TimeStamp(np.mean(np.array(values[frame_start: to])),
+                                        timestamps[frame_start].start_point,
+                                        timestamps[to-1].end_point,timestamps[frame_start].entity_id,
+                                        timestamps[frame_start].ts_class))
+            frame_start += frame_size
+
+        # handle the remainder if n % w != 0
+        if frame_start < values_length:
+            indices_ranges.append((frame_start, values_length))
+            new_values.append(TimeStamp(np.mean(np.array(values[frame_start: values_length])),
+                                        timestamps[frame_start].start_point,
+                                        timestamps[values_length-1].end_point, timestamps[frame_start].entity_id,
+                                        timestamps[frame_start].ts_class))
+
+        return new_values
 
     def abstract_property(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
                    property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int):
