@@ -46,6 +46,7 @@ def test_cutpoints(MAX, MIN, PROPERTY_ID):
 
 
 class TestMethods(unittest.TestCase):
+
     def test_synthetic_EQW_2(self):
         d = EqualWidth(2, 0)
         p2t = {1:[]}

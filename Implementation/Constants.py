@@ -11,6 +11,6 @@ class FileFormatNotCorrect(Exception):
     pass
 
 
-def debug_print(string):
+def debug_print(string,args=""):
     if DEBUG_MODE:
-        print(string)
+        print(string,args)

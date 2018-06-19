@@ -18,13 +18,16 @@ class Persist(Discretization):
     def get_map_used(self):
         return "property_to_timestamps"
 
-    def __init__(self, bin_count, max_gap, window_size=1):
+    def __init__(self, bin_count, max_gap, window_size=1, ACCURACY_MEASURE=100):
         super(Persist, self).__init__(max_gap, window_size)
         self.bin_count = int(bin_count)
+        self.accuracy = ACCURACY_MEASURE
+        self.cutoffs_according_to_order = {}
+        self.chosen_scores = {}
 
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],
                        property_to_timestamps: Dict[int, List[TimeStamp]]) -> Dict[int, List[float]]:
-        equal_frequency = EqualFrequency(100, -1)
+        equal_frequency = EqualFrequency(self.accuracy, -1)
         m1, m2, m3 = equal_frequency.discretize(property_to_entities, class_to_entities, property_to_timestamps)
         self.candidate_cutpoints = equal_frequency.bins_cutpoints
         cutpoints = {}
@@ -58,17 +61,14 @@ class Persist(Discretization):
         chosen_cutoffs = SortedList()
         chosen_cutoffs_indices = SortedList()
 
-        for e in property_to_entities[property_id]:
-            time_stamps = sorted(e.properties[property_id])
+        self.load_state_information(A, property_id, property_to_entities, state_vector)
 
-            for i in range(len(time_stamps)-1):
-                prev = time_stamps[i]
-                now = time_stamps[i+1]
-                A[now.value][prev.value] += 1
-                state_vector[prev.value] += 1
-            state_vector[time_stamps[-1].value] += 1
+        cutoffs_according_to_order = []
+        chosen_scores = []
+        iterations_scores_and_cutoffs = []
 
         for i in range(self.bin_count - 1):
+            scores_and_cutoffs = []
             max_distance = float('-inf')
             best_cutoff = float('-inf')
             best_index = float('-inf')
@@ -80,13 +80,32 @@ class Persist(Discretization):
                 temp_cutoff_indices.add(j)
                 new_A = self.collapse_matrix(A, temp_cutoff_indices)
                 distance_of_series = self.distance_measure(new_A, state_vector)
+                scores_and_cutoffs.append((cutoff, distance_of_series))
                 if distance_of_series > max_distance:
                     max_distance = distance_of_series
                     best_cutoff = cutoff
                     best_index = j
+            iterations_scores_and_cutoffs.append(scores_and_cutoffs)
             chosen_cutoffs.add(best_cutoff)
             chosen_cutoffs_indices.add(best_index)
+            cutoffs_according_to_order.append(best_cutoff)
+            chosen_scores.append(max_distance)
+
+        self.cutoffs_according_to_order.update({property_id: cutoffs_according_to_order})
+        self.chosen_scores.update({property_id: chosen_scores})
         return list(chosen_cutoffs)
+
+    @staticmethod
+    def load_state_information(A, property_id, property_to_entities, state_vector):
+        for e in property_to_entities[property_id]:
+            time_stamps = sorted(e.properties[property_id])
+
+            for i in range(len(time_stamps) - 1):
+                prev = time_stamps[i]
+                now = time_stamps[i + 1]
+                A[now.value][prev.value] += 1
+                state_vector[prev.value] += 1
+            state_vector[time_stamps[-1].value] += 1
 
     @staticmethod
     def collapse_matrix(A, cut_points):
