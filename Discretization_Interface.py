@@ -171,13 +171,14 @@ def first_method(running_configurations, root_folder, file_id):
                     d1, d2, d3 = d.discretize_property(p2e, c2e, p2t, pid)
                     write_partition(d1,d2,d3,output_path_folder,pid)
             except Exception as e:
+                print("\n*************EXCPETION THROWN!!!!*************")
+                exception_text = "--------------------\nDate: %s\nInput file: %s\nOutput path: %s\nMethod: %s\nArgs: %s\nError: %s\n" % (
+                    datetime.datetime.now(), input_path, output_path_folder, "KarmaLego", args, e)
+                print(exception_text)
+                print("***********************************************\n")
                 with open(SAD_LOG_PATH, 'a') as f:
-                    print("\n*************EXCPETION THROWN!!!!*************")
-                    exception_text = "--------------------\nDate: %s\nInput file: %s\nOutput path: %s\nMethod: %s\nArgs: %s\nError: %s\n" % (
-                        datetime.datetime.now(), input_path, output_path_folder, "KarmaLego", args, e)
-                    print(exception_text)
-                    print("***********************************************\n")
                     f.write(exception_text)
+                    raise
     print("Writing output...")
     configuration_count = 0
     for running_configuration in discretization_methods:
@@ -213,31 +214,33 @@ def second_method(running_configurations, root_folder, file_id):
                 print("Pattern Discovery on %s" % file_name)
                 input_path = input_path_folder + "\\" + file
                 input_paths.append(input_path)
-                try:
-                    if not exists(output_path_folder):
-                        makedirs(output_path_folder)
-                    args = pattern_discovery_args.split("_")
-                    #try:
-                    output_file = "TIRPS_" + file_name
-                    use_karma_lego(input_path,output_path_folder,output_file,args)
-                    with open(HAPPY_LOG_PATH, 'a') as f:
-                        f.write(
-                            "--------------------\nDate: %s\nInput file: %s\nOutput path: %s\nMethod: %s\nArgs: %s\n" % (
-                                datetime.datetime.now(), input_path, output_path_folder, "KarmaLego", args))
-                except Exception as e:
-                    with open(SAD_LOG_PATH, 'a') as f:
-                        print("\n*************EXCPETION THROWN!!!!*************")
-                        exception_text = "--------------------\nDate: %s\nInput file: %s\nOutput path: %s\nMethod: %s\nArgs: %s\nError: %s\n" % (
-                                datetime.datetime.now(), input_path, output_path_folder, "KarmaLego", args, e)
-                        print(exception_text)
-                        print("***********************************************\n")
-                        f.write(exception_text)
+                if not runKFOLD:
+                    try:
+                        if not exists(output_path_folder):
+                            makedirs(output_path_folder)
+                        args = pattern_discovery_args.split("_")
+                        #try:
+                        output_file = "TIRPS_" + file_name
+                        use_karma_lego(input_path,output_path_folder,output_file,args)
+                        with open(HAPPY_LOG_PATH, 'a') as f:
+                            f.write(
+                                "--------------------\nDate: %s\nInput file: %s\nOutput path: %s\nMethod: %s\nArgs: %s\n" % (
+                                    datetime.datetime.now(), input_path, output_path_folder, "KarmaLego", args))
+                    except Exception as e:
+                        with open(SAD_LOG_PATH, 'a') as f:
+                            print("\n*************EXCPETION THROWN!!!!*************")
+                            exception_text = "--------------------\nDate: %s\nInput file: %s\nOutput path: %s\nMethod: %s\nArgs: %s\nError: %s\n" % (
+                                    datetime.datetime.now(), input_path, output_path_folder, "KarmaLego", args, e)
+                            print(exception_text)
+                            print("***********************************************\n")
+                            f.write(exception_text)
         if runKFOLD:
             use_kfold(input_paths,output_path_folder + "\\KFOLD\\%s" % k,k,*args)
-        with open(output_path_folder + "\\" + "finished.log", 'w') as f:
-            f.write(
-                "----FINISHED!----\nDate: %s\nInput file: %s\nOutput path: %s\nMethod: %s\nArgs: %s\n" % (
-                    datetime.datetime.now(), input_path_folder, output_path_folder, "KarmaLego", args))
+        else:
+            with open(output_path_folder + "\\" + "finished.log", 'w') as f:
+                f.write(
+                    "----FINISHED!----\nDate: %s\nInput file: %s\nOutput path: %s\nMethod: %s\nArgs: %s\n" % (
+                        datetime.datetime.now(), input_path_folder, output_path_folder, "KarmaLego", args))
 
 
 def use_karma_lego(input_path,output_path_folder,output_file,args):
@@ -258,6 +261,10 @@ def use_kfold(input_paths,output_path,k,epsilon,max_gap,vertical_support):
     if not exists(output_path):
         makedirs(output_path)
     kfold_tirps(input_paths,output_path,int(k),int(epsilon),int(max_gap),float(vertical_support))
+    with open(output_path + "\\" + "finished.log", 'w') as f:
+        f.write(
+            "----FINISHED!----\nDate: %s\nInput file: %s\nOutput path: %s\nMethod: %s\nArgs: %s\n" % (
+                datetime.datetime.now(), input_paths, output_path, "KFOLD", [k,epsilon,max_gap,vertical_support]))
 
 
 if __name__ == '__main__':

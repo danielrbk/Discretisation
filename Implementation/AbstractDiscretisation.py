@@ -24,7 +24,7 @@ class Discretization(ABC):
         self.bin_symbol: int = -1  # Discretization symbol
         self.bins_cutpoints: Dict[int, List[float]] = {}  # List of bin cutpoints
         self.property_folder = ""
-        self.window_size = window_size
+        self.window_size = int(window_size)
 
     def transform(self, property_id: int, val: TimeStamp) -> None:
         """

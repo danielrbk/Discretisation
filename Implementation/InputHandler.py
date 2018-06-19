@@ -59,6 +59,11 @@ def format_timestamps_to_int(file_path,entities_path):
             time = line.rstrip().split(',')[2]
 """
 
+
+def format_timestamps_to_int(file_path, entities_path):
+    pass
+
+
 def partition_file_to_properties(file_path,entities_path):
     folder = file_path.split("\\")[:-1]
     partitions_path = "\\".join(folder) + "\\partitions"
@@ -80,10 +85,11 @@ def partition_file_to_properties(file_path,entities_path):
                     print("Wrote %s lines..." % line_count)
                 line_count += 1
                 if line_count == 1:
-                    time = line.rstrip().split(',')
-                    if not isinstance(time,int):
+                    try:
+                        time = int(line.rstrip().split(',')[2])
+                    except:
                         format_timestamps_to_int(file_path, entities_path)
-                        return
+                        return            
                 dr = DataRow.get_data_from_row(line)
                 if dr.entity_id not in entities:
                     entities.add(dr.entity_id)
