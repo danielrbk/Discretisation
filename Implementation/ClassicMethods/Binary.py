@@ -52,7 +52,7 @@ def class_information_entropy(subset_1, subset_2, classes_list):
 
 
 class Binary(Discretization):
-    def get_map_used(self):
+    def get_map_used():
         return "property_to_entities"
 
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],

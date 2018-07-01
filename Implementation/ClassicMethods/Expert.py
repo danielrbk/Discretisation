@@ -10,7 +10,7 @@ from Implementation.TimeStamp import TimeStamp
 
 class Expert(Discretization):
 
-    def get_map_used(self):
+    def get_map_used():
         return "property_to_timestamps"
 
     def __init__(self, bins_cutpoints, max_gap, window_size=1):

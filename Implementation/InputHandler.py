@@ -4,6 +4,8 @@ from os.path import splitext, exists
 
 import os
 
+import numpy as np
+
 from Implementation.ClassicMethods.Expert import Expert
 from Implementation.AbstractDiscretisation import Discretization
 from Implementation.Constants import CLASS_SEPARATOR, DEBUG_MODE
@@ -119,6 +121,20 @@ def partition_file_to_properties(file_path,entities_path):
             input.writerow(lst)
             for c in class_to_entity_count:
                 class_input.writerow([c,class_to_entity_count[c]])
+        with open(partitions_path + "\\properties_metadata.csv", 'w', newline='') as out_file:
+            o = csv.writer(out_file)
+            o.writeline(["Property ID","Mean Value","Standard Deviation","Minimum Value","Maximum Value"])
+            for pid in property_to_file:
+                with open(partitions_path + "\\property%s.csv" % pid, 'r') as f:
+                    vals = np.array([float(x.rstrip().split(',')[-1]) for x in f.readlines()])
+                    avg = np.average(vals)
+                    std = np.std(vals)
+                    min = np.min(vals)
+                    max = np.max(vals)
+                    meta = [pid,avg,std,min,max]
+                    o.writeline(meta)
+
+
     else:
         print("Partitions found. Continuing...")
 

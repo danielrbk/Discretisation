@@ -11,7 +11,7 @@ import numpy as np
 
 class KMeans(Discretization):
 
-    def get_map_used(self):
+    def get_map_used():
         return "property_to_timestamps"
 
     def set_bin_ranges(self, property_to_entities: Dict[int, Set[Entity]], class_to_entities: Dict[int, Set[Entity]],

@@ -681,8 +681,9 @@ class Discretization(ABC):
                 e.properties[property_id].append(ts)
         return property_to_entity
 
+    @staticmethod
     @abstractmethod
-    def get_map_used(self):
+    def get_map_used():
         pass
 
 

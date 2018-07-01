@@ -23,7 +23,7 @@ class SaxConstrainsException(Exception): pass
 
 
 class SAX(Discretization):
-    def get_map_used(self):
+    def get_map_used():
         return "property_to_timestamps"
 
     def __init__(self, bin_count, max_gap, window_size=1):
