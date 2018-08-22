@@ -14,7 +14,7 @@ from Implementation.Entity import Entity
 from Implementation.InputHandler import get_maps_from_file
 
 
-def write_partition(p2e: Dict[int, Set[Entity]], c2e: Dict[int, Set[Entity]], p2t: Dict[int, List[TimeStamp]],out_folder, property_id):
+def write_partition(p2e: Dict[int, Set[Entity]], c2e: Dict[int, Set[Entity]], p2t: Dict[int, List[TimeStamp]], cutpoints: List[float], out_folder, property_id):
     open_file = None
     start = True
     if p2t:
@@ -46,9 +46,13 @@ def write_partition(p2e: Dict[int, Set[Entity]], c2e: Dict[int, Set[Entity]], p2
                 for e in sorted(c2e[c_id], key=lambda x:x.entity_id):
                     for ts in e.properties[property_id]:
                         f.write("%s,%s,%s,%s\n" % (ts.start_point, ts.end_point, floor(ts.value), e.entity_id))
+    with open(out_folder + "\\property%s_cutpoints.temp" % (property_id), 'w') as f:
+        f.write(",".join([str(x) for x in cutpoints]))
+
 
 def write_partition_float(p2e: Dict[int, Set[Entity]], c2e: Dict[int, Set[Entity]], p2t: Dict[int, List[TimeStamp]],out_folder, property_id):
     open_file = None
+    open_files = []
     start = True
     if p2t:
         sorted_by_entity_start: List[TimeStamp] = sorted(p2t[property_id],key=lambda x: (x.ts_class,x.entity_id, x.start_point, x.end_point))
@@ -60,6 +64,7 @@ def write_partition_float(p2e: Dict[int, Set[Entity]], c2e: Dict[int, Set[Entity
                     open_file.close()
                 c_id = ts.ts_class
                 open_file = open(out_folder + "\\property%s_class%s.temp" % (property_id,c_id), 'w')
+                open_files.append(open_file)
             open_file.write("%s,%s,%s,%s\n" % (ts.start_point, ts.end_point, float(ts.value), ts.entity_id))
     elif p2e:
         entities = sorted(p2e[property_id],key=lambda x:(x.entity_class,x.entity_id))
@@ -71,6 +76,7 @@ def write_partition_float(p2e: Dict[int, Set[Entity]], c2e: Dict[int, Set[Entity
                     open_file.close()
                 c_id = e.entity_class
                 open_file = open(out_folder + "\\property%s_class%s.temp" % (property_id,c_id), 'w')
+                open_files.append(open_file)
             for ts in e.properties[property_id]:
                 open_file.write("%s,%s,%s,%s\n" % (ts.start_point, ts.end_point, float(ts.value), e.entity_id))
     else:
@@ -79,8 +85,11 @@ def write_partition_float(p2e: Dict[int, Set[Entity]], c2e: Dict[int, Set[Entity
                 for e in sorted(c2e[c_id], key=lambda x:x.entity_id):
                     for ts in e.properties[property_id]:
                         f.write("%s,%s,%s,%s\n" % (ts.start_point, ts.end_point, float(ts.value), e.entity_id))
+    for open_file in open_files:
+        open_file.close()
 
-def merge_partitions(out_folder, vmap_path, method_name,total_properties_list, class_list, class_to_entity_count, bins_cutpoints, entity_count):
+
+def merge_partitions(out_folder, vmap_path, method_name,total_properties_list, class_list, class_to_entity_count, entity_count):
     folder_path = out_folder
     states_path = folder_path + "\\" + "states.csv"
     finished_path = folder_path + "\\" + "finished.log"
@@ -90,6 +99,10 @@ def merge_partitions(out_folder, vmap_path, method_name,total_properties_list, c
     last_base = 0
     property_to_state_to_count = {}
     sid_to_count = {}
+    bins_cutpoints = {}
+    for p in total_properties_list:
+        with open(out_folder + "\\property%s_cutpoints.temp" % p) as f:
+            bins_cutpoints[p] = [float(x) for x in f.read().rstrip().split(',')]
     cutpoints = bins_cutpoints
     for key in sorted(cutpoints.keys()):
         property_to_base[key] = last_base
@@ -98,56 +111,63 @@ def merge_partitions(out_folder, vmap_path, method_name,total_properties_list, c
     if len(class_list) == 0:
         class_list.append("None")
         class_to_entity_count["None"] = entity_count
+    class_list = list(class_list) + [-10000]
     for c in class_list:
-        e_id = float('-inf')
-        properties_list = []
-        for p_id in total_properties_list:
-            if exists(out_folder + "\\property%s_class%s.temp" % (p_id,c)):
-                properties_list.append(p_id)
-        with open(out_folder + "\\" + method_name + '_Class' + str(c) + '.txt', 'w') as f,\
-                open(out_folder + "\\discretized_Class" + str(c) + ".csv", 'w') as k_f:
-            f.write('startToncepts\n')
-            k_f.write('startToncepts\n')
-            f.write('numberOfEntities,' + str(class_to_entity_count[c]))
-            k_f.write('numberOfEntities,' + str(class_to_entity_count[c]))
-            property_to_file = {p: open(out_folder + "\\property%s_class%s.temp" % (p,c)) for p in properties_list}
-            property_to_line = {p: property_to_file[p].readline().rstrip().split(",") for p in properties_list}
-            lines = [(int(property_to_line[p][-1]),int(property_to_line[p][0]),int(property_to_line[p][1]),int(property_to_line[p][2]),p) for p in property_to_line]
-            lines = sorted(lines)
-            while len(lines) != 0:
-                new_eid = lines[0][0]
-                if new_eid != e_id:
-                    f.write("\n%s;\n" % new_eid)
-                    k_f.write("\n%s;\n" % new_eid)
-                    e_id = new_eid
-                else:
-                    f.write(";")
-                    k_f.write(";")
-                p = int(lines[0][4])
-                if p in property_to_state_to_count:
-                    sid_to_count = property_to_state_to_count[p]
-                else:
-                    property_to_state_to_count[p] = {}
-                    sid_to_count = property_to_state_to_count[p]
-                bin = int(lines[0][3])
-                state_id = property_to_base[p] + bin
-                if bin in sid_to_count:
-                    sid_to_count[bin] += 1
-                else:
-                    sid_to_count[bin] = 1
-                f.write("%s,%s,%s,%s" % (lines[0][1],lines[0][2],lines[0][3],p))
-                k_f.write("%s,%s,%s,%s" % (lines[0][1],lines[0][2],state_id,p))
-                property_to_line[p] = property_to_file[p].readline().rstrip()
-                lines.pop(0)
-                if not property_to_line[p]:
-                    property_to_file[p].close()
-                    os.remove(property_to_file[p].name)
-                else:
-                    line = property_to_line[p].split(",")
-                    line = (int(line[-1]),int(line[0]),int((line[1])),int(line[2]),p)
-                    bisect.insort(lines,line)
+        if not exists(out_folder +"\\discretized_Class-%s.csv" % c):
+            e_id = float('-inf')
+            properties_list = []
+            class_exists = False
+            for p_id in total_properties_list:
+                if exists(out_folder + "\\property%s_class%s.temp" % (p_id,c)):
+                    properties_list.append(p_id)
+                    class_exists = True
+            if not class_exists:
+                continue
+            with open(out_folder + "\\" + method_name + '_Class' + str(c) + '.txt', 'w') as f,\
+                    open(out_folder + "\\discretized_Class" + str(c) + ".csv", 'w') as k_f:
+                f.write('startToncepts\n')
+                k_f.write('startToncepts\n')
+                f.write('numberOfEntities,' + str(class_to_entity_count[c]))
+                k_f.write('numberOfEntities,' + str(class_to_entity_count[c]))
+                property_to_file = {p: open(out_folder + "\\property%s_class%s.temp" % (p,c)) for p in properties_list}
+                property_to_line = {p: property_to_file[p].readline().rstrip().split(",") for p in properties_list}
+                lines = [(int(property_to_line[p][-1]),int(property_to_line[p][0]),int(property_to_line[p][1]),int(property_to_line[p][2]),p) for p in property_to_line]
+                lines = sorted(lines)
+                while len(lines) != 0:
+                    new_eid = lines[0][0]
+                    if new_eid != e_id:
+                        f.write("\n%s;\n" % new_eid)
+                        k_f.write("\n%s;\n" % new_eid)
+                        e_id = new_eid
+                    else:
+                        f.write(";")
+                        k_f.write(";")
+                    p = int(lines[0][4])
+                    if p in property_to_state_to_count:
+                        sid_to_count = property_to_state_to_count[p]
+                    else:
+                        property_to_state_to_count[p] = {}
+                        sid_to_count = property_to_state_to_count[p]
+                    bin = int(lines[0][3])
+                    #state_id = property_to_base[p] + bin
+                    state_id = "%s%s" % (p,bin)
+                    if bin in sid_to_count:
+                        sid_to_count[bin] += 1
+                    else:
+                        sid_to_count[bin] = 1
+                    f.write("%s,%s,%s,%s" % (lines[0][1],lines[0][2],lines[0][3],p))
+                    k_f.write("%s,%s,%s,%s" % (lines[0][1],lines[0][2],state_id,p))
+                    property_to_line[p] = property_to_file[p].readline().rstrip()
+                    lines.pop(0)
+                    if not property_to_line[p]:
+                        property_to_file[p].close()
+                        os.remove(property_to_file[p].name)
+                    else:
+                        line = property_to_line[p].split(",")
+                        line = (int(line[-1]),int(line[0]),int((line[1])),int(line[2]),p)
+                        bisect.insort(lines,line)
 
-    write_auxiliary_output(vmap_path,states_path,properties_list,bins_cutpoints,method_name, property_to_state_to_count)
+    write_auxiliary_output(vmap_path,states_path,total_properties_list,bins_cutpoints,method_name, property_to_state_to_count)
     with open(finished_path, 'w') as f:
         f.write("done")
 
@@ -166,7 +186,7 @@ def write_auxiliary_output(vmap_path,states_path,properties_list,cutpoints, meth
                 else:
                     id_to_name[int(id)] = name
     except FileNotFoundError:
-        for property_id in properties_list:
+        for property_id in sorted(cutpoints.keys()):
             id_to_name[int(property_id)] = "Property_%s" % (property_id)
 
     with open(states_path, 'w', newline='') as out_file:
@@ -180,7 +200,7 @@ def write_auxiliary_output(vmap_path,states_path,properties_list,cutpoints, meth
             if len(cutpoints[key]) == 0:
                 continue
             bin_id = 0
-            state_to_entropy = property_to_state_to_entropy[key]
+            state_to_entropy = {}#property_to_state_to_entropy[key]
             from_val = -EXTREME_VAL
             for cutpoint in cutpoints[key]:
                 entropy = ""
@@ -211,7 +231,7 @@ def calculate_property_entropy(property_to_state_to_count):
     for property_id in property_to_state_to_count:
         property_to_state_to_entropy[property_id] = {}
         state_to_count = property_to_state_to_count[property_id]
-        max_val = max(state_to_count.values())
+        max_val = sum(state_to_count.values())
         for state in state_to_count:
             property_to_state_to_entropy[property_id][state] = get_entropy(state_to_count[state]/max_val)
     return property_to_state_to_entropy

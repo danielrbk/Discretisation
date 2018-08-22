@@ -20,6 +20,7 @@ class EqualWidth(Discretization):
                        property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int):
         if not property_to_timestamps:
             self.load_property_to_timestamps(property_to_timestamps, property_id)
+            print("loaded property to timestamps")
         property_values = [ts.value for ts in property_to_timestamps[property_id]]
         min_val = min(property_values)
         max_val = max(property_values)

@@ -4,8 +4,6 @@ from os.path import splitext, exists
 
 import os
 
-import numpy as np
-
 from Implementation.ClassicMethods.Expert import Expert
 from Implementation.AbstractDiscretisation import Discretization
 from Implementation.Constants import CLASS_SEPARATOR, DEBUG_MODE
@@ -117,24 +115,16 @@ def partition_file_to_properties(file_path,entities_path):
             input = csv.writer(f)
             class_input = csv.writer(c)
             lst = list(property_to_file.keys())
-            lst.remove(CLASS_SEPARATOR)
+            if CLASS_SEPARATOR in lst:
+                lst.remove(CLASS_SEPARATOR)
             input.writerow(lst)
+            classed_entities = 0
             for c in class_to_entity_count:
+                classed_entities += class_to_entity_count[c]
                 class_input.writerow([c,class_to_entity_count[c]])
-        with open(partitions_path + "\\properties_metadata.csv", 'w', newline='') as out_file:
-            o = csv.writer(out_file)
-            o.writeline(["Property ID","Mean Value","Standard Deviation","Minimum Value","Maximum Value"])
-            for pid in property_to_file:
-                with open(partitions_path + "\\property%s.csv" % pid, 'r') as f:
-                    vals = np.array([float(x.rstrip().split(',')[-1]) for x in f.readlines()])
-                    avg = np.average(vals)
-                    std = np.std(vals)
-                    min = np.min(vals)
-                    max = np.max(vals)
-                    meta = [pid,avg,std,min,max]
-                    o.writeline(meta)
-
-
+            non_classed_entities = len(entities) - classed_entities
+            if non_classed_entities != 0:
+                class_input.writerow([-10000,non_classed_entities])
     else:
         print("Partitions found. Continuing...")
 

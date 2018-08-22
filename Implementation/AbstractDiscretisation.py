@@ -1,6 +1,8 @@
+import itertools
 from abc import ABC, abstractmethod
 from functools import reduce
 from multiprocessing.pool import ThreadPool
+from os.path import exists
 
 import numpy as np
 
@@ -258,8 +260,8 @@ class Discretization(ABC):
                 else:
                     entities[e].append(ts)
 
-            for e in entities:
-                new_property_to_timestamps[property_id] += self.paa_timestamps(entities[e])
+            lists = [self.paa_timestamps(entities[e]) for e in entities]
+            new_property_to_timestamps[property_id] = list(itertools.chain.from_iterable(lists))
 
             new_property_to_timestamps[property_id] = list(sorted(new_property_to_timestamps[property_id],key=lambda ts: ts.start_point))
         return new_property_to_timestamps
@@ -310,14 +312,32 @@ class Discretization(ABC):
 
     def paa_timestamps(self,timestamps: List[TimeStamp]):
         if self.window_size == 1:
-            return [TimeStamp(ts.value,ts.start_point,ts.end_point,ts.entity_id,ts.ts_class) for ts in timestamps]
+            return [TimeStamp(ts.value, ts.start_point, ts.end_point, ts.entity_id, ts.ts_class) for ts in timestamps]
+        timestamps = sorted(timestamps, key=lambda ts: ts.start_point)
+        start_point = timestamps[0].start_point
+        end_point = timestamps[-1].start_point
+        time_point = start_point
+        i = 0
+        new_values = []
+        while time_point < end_point:
+            count = 0
+            s = 0
+            while i < len(timestamps) and timestamps[i].start_point < time_point + self.window_size:
+                s += timestamps[i].value
+                count += 1
+                i += 1
+            if count != 0:
+                val = s / count
+                new_values.append(TimeStamp(val, time_point, time_point+self.window_size, timestamps[i-1].entity_id,timestamps[i-1].ts_class))
+            time_point += self.window_size
+        '''
         values = [ts.value for ts in timestamps]
 
         values_length = len(values)
 
         frame_size = self.window_size
 
-        new_values = []
+   
 
         frame_start = 0
 
@@ -343,6 +363,7 @@ class Discretization(ABC):
                                         timestamps[frame_start].start_point,
                                         timestamps[values_length-1].end_point, timestamps[frame_start].entity_id,
                                         timestamps[frame_start].ts_class))
+        '''
 
         return new_values
 
@@ -504,17 +525,18 @@ class Discretization(ABC):
                     entities[eid] = e
                     e.properties[property_id] = []
                 e.properties[property_id].append(dr.get_time_stamp())
-        with open(self.property_folder + "\\property%s.csv" % CLASS_SEPARATOR) as f:
-            for line in f:
-                dr = DataRow.get_data_from_row(line)
-                eid = dr.get_entity_id()
-                if eid in entities:
-                    e = entities[eid]
-                    c = int(dr.get_time_stamp().value)
-                    e.entity_class = c
-                    for pid in e.properties:
-                        for ts in e.properties[pid]:
-                            ts.ts_class = c
+        if exists((self.property_folder + "\\property%s.csv" % CLASS_SEPARATOR)):
+            with open(self.property_folder + "\\property%s.csv" % CLASS_SEPARATOR) as f:
+                for line in f:
+                    dr = DataRow.get_data_from_row(line)
+                    eid = dr.get_entity_id()
+                    if eid in entities:
+                        e = entities[eid]
+                        c = int(dr.get_time_stamp().value)
+                        e.entity_class = c
+                        for pid in e.properties:
+                            for ts in e.properties[pid]:
+                                ts.ts_class = c
         return property_to_entities
 
     def load_class_to_entity(self, class_to_entities: Dict[int, Set['Entity']], property_id: int) -> Dict[int, Set['Entity']]:
@@ -530,20 +552,21 @@ class Discretization(ABC):
                     entities[eid] = e
                     e.properties[property_id] = []
                 e.properties[property_id].append(dr.get_time_stamp())
-        with open(self.property_folder + "\\property%s.csv" % CLASS_SEPARATOR) as f:
-            for line in f:
-                dr = DataRow.get_data_from_row(line)
-                eid = dr.get_entity_id()
-                if eid in entities:
-                    e = entities[eid]
-                    c = int(dr.get_time_stamp().value)
-                    e.entity_class = c
-                    if c not in class_to_entities:
-                        class_to_entities[c] = set()
-                    class_to_entities[c].add(e)
-                    for pid in e.properties:
-                        for ts in e.properties[pid]:
-                            ts.ts_class = c
+        if exists((self.property_folder + "\\property%s.csv" % CLASS_SEPARATOR)):
+            with open(self.property_folder + "\\property%s.csv" % CLASS_SEPARATOR) as f:
+                for line in f:
+                    dr = DataRow.get_data_from_row(line)
+                    eid = dr.get_entity_id()
+                    if eid in entities:
+                        e = entities[eid]
+                        c = int(dr.get_time_stamp().value)
+                        e.entity_class = c
+                        if c not in class_to_entities:
+                            class_to_entities[c] = set()
+                        class_to_entities[c].add(e)
+                        for pid in e.properties:
+                            for ts in e.properties[pid]:
+                                ts.ts_class = c
         return class_to_entities
 
     def load_property_to_timestamps(self,  property_to_timestamps: Dict[int, List[TimeStamp]], property_id: int) -> Dict[int, List[TimeStamp]]:
@@ -563,21 +586,20 @@ class Discretization(ABC):
                         #debug_print("Memory used by map: %s" % (deep_getsizeof(entity_to_timestamps,set()) / (1024*1024)))
                     entity_to_timestamps[eid] = [dr.get_time_stamp()]
                 del dr
-        with open(self.property_folder + "\\property%s.csv" % CLASS_SEPARATOR) as f:
-            for line in f:
-                dr = DataRow.get_data_from_row(line)
-                eid = dr.get_entity_id()
-                c = int(dr.get_time_stamp().value)
-                if eid in entity_to_timestamps:
-                    for ts in entity_to_timestamps[eid]:
-                        ts.ts_class = c
+        if exists((self.property_folder + "\\property%s.csv" % CLASS_SEPARATOR)):
+            with open(self.property_folder + "\\property%s.csv" % CLASS_SEPARATOR) as f:
+                for line in f:
+                    dr = DataRow.get_data_from_row(line)
+                    eid = dr.get_entity_id()
+                    c = int(dr.get_time_stamp().value)
+                    if eid in entity_to_timestamps:
+                        for ts in entity_to_timestamps[eid]:
+                            ts.ts_class = c
         combined_list = []
         count = 0
         lists = len(entity_to_timestamps.values())
-        for lst in entity_to_timestamps.values():
-            combined_list += lst
+        combined_list = list(itertools.chain.from_iterable(entity_to_timestamps.values()))
         property_to_timestamps[property_id] = combined_list
-        del entity_to_timestamps
         return property_to_timestamps
 
     @staticmethod
