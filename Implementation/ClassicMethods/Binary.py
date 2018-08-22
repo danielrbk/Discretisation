@@ -52,6 +52,7 @@ def class_information_entropy(subset_1, subset_2, classes_list):
 
 
 class Binary(Discretization):
+    @staticmethod
     def get_map_used():
         return "property_to_entities"
 

@@ -13,7 +13,7 @@ import numpy as np
 
 
 class TD4C(Discretization):
-
+    @staticmethod
     def get_map_used():
         return "property_to_timestamps"
 

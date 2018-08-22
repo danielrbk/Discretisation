@@ -117,7 +117,7 @@ def first_method(running_configurations, root_folder, file_id):
         entity_count -= 1
 
     print("Partitions done")
-    discretization_methods: List[Tuple[str,str,Discretization]] = []
+    discretization_methods: List[Tuple(str,str,Discretization)] = []
     for running_configuration in running_configurations:
         method_name = running_configuration[0]
         args = running_configuration[1]
@@ -175,7 +175,7 @@ def first_method(running_configurations, root_folder, file_id):
             except Exception as e:
                 print("\n*************EXCPETION THROWN!!!!*************")
                 exception_text = "--------------------\nDate: %s\nInput file: %s\nOutput path: %s\nMethod: %s\nArgs: %s\nError: %s\n" % (
-                    datetime.datetime.now(), input_path, output_path_folder, "KarmaLego", args, e)
+                    datetime.datetime.now(), input_path, output_path_folder, method_name, args, e)
                 print(exception_text)
                 print("***********************************************\n")
                 with open(output_path_folder + "\\error.log", 'w') as f:
@@ -186,6 +186,9 @@ def first_method(running_configurations, root_folder, file_id):
     print("Writing output...")
     configuration_count = 0
     for running_configuration in discretization_methods:
+        method_name = running_configuration[0]
+        args = running_configuration[1]
+
         configuration_count += 1
         method_name = running_configuration[0]
         if method_name == "KARMALEGO":
@@ -194,7 +197,19 @@ def first_method(running_configurations, root_folder, file_id):
         print("Outputting method %s, total: %s/%s" % (method_name,configuration_count, total_configurations))
         output_path_folder = "%s\\%s\\%s\\%s" % (root_folder, file_id, method_name, args)
         vmap_path = "%s\\%s\\%s" % (root_folder, file_id, "vmap.csv")
-        merge_partitions(output_path_folder,vmap_path,method_name,property_ids,class_to_entity_count.keys(),class_to_entity_count, entity_count)
+        try:
+            merge_partitions(output_path_folder,vmap_path,method_name,property_ids,list(class_to_entity_count.keys()),class_to_entity_count, entity_count)
+        except Exception as e:
+            print("\n*************EXCPETION THROWN WHILE OUTPUTTING!!!!*************")
+            exception_text = "--------------------\nDate: %s\nInput file: %s\nOutput path: %s\nMethod: %s\nArgs: %s\nError: %s\n" % (
+                datetime.datetime.now(), input_path, output_path_folder, method_name, args, e)
+            print(exception_text)
+            print("***********************************************\n")
+            with open(output_path_folder + "\\error.log", 'w') as f:
+                f.write(exception_text)
+            with open(SAD_LOG_PATH, 'a') as f:
+                f.write(exception_text)
+            raise
 
 
 def second_method(running_configurations, root_folder, file_id):

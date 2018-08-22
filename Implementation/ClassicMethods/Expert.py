@@ -9,7 +9,7 @@ from Implementation.TimeStamp import TimeStamp
 
 
 class Expert(Discretization):
-
+    @staticmethod
     def get_map_used():
         return "property_to_timestamps"
 

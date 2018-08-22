@@ -23,6 +23,7 @@ class SaxConstrainsException(Exception): pass
 
 
 class SAX(Discretization):
+    @staticmethod
     def get_map_used():
         return "property_to_timestamps"
 
